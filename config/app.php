@@ -122,5 +122,5 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
-
+    'bot_webhook_url' => env('TELEGRAM_WEBHOOK_DOMAIN', env('APP_URL')),
 ];
