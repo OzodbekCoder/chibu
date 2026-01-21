@@ -18,4 +18,10 @@ class MyWebhookHandler extends WebhookHandler
                 . ".\r\n<b>Sizning telegram ID: $id.</b>"
         );
     }
+    public function start()
+    {
+        $this->reply(
+            'Nima kerakligini tanlang👇',
+        );
+    }
 }
