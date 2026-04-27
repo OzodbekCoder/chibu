@@ -4,15 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Client extends Model
+class ShipmentPayment extends Model
 {
     protected $guarded = [];
 
-    public function shipments(): HasMany
+    protected $casts = [
+        'amount'   => 'decimal:2',
+        'usd_rate' => 'decimal:2',
+        'paid_at'  => 'date',
+    ];
+
+    public function shipment(): BelongsTo
     {
-        return $this->hasMany(Shipment::class, 'client_id');
+        return $this->belongsTo(Shipment::class);
     }
 
     public function createdBy(): BelongsTo

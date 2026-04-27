@@ -11,17 +11,20 @@ return new class extends Migration
         Schema::create('currency_rates', function (Blueprint $table) {
             $table->bigIncrements('id');
 
-            $table->string('base', 3)->default('USD');   // USD
-            $table->string('quote', 3)->default('UZS');  // UZS
-            $table->decimal('rate', 14, 4);              // 1 USD = xxxx UZS
-            $table->date('rate_date');                   // kurs sanasi
+            $table->string('base', 3)->default('USD');
+            $table->string('quote', 3)->default('UZS');
+            $table->decimal('rate', 14, 4); // 1 USD = xxxx UZS
+            $table->date('rate_date');
 
-            $table->unsignedBigInteger('created_by_telegram_id')->nullable();
+            $table->foreignId('created_by_id')
+                ->nullable()
+                ->references('id')->on('telegraph_chats')
+                ->nullOnDelete();
 
             $table->timestamps();
 
             $table->unique(['base', 'quote', 'rate_date']);
-            $table->index(['rate_date']);
+            $table->index('rate_date');
         });
     }
 

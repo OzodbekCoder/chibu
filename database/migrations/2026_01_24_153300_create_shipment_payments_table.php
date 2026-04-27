@@ -8,30 +8,32 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('shipment_status_logs', function (Blueprint $table) {
+        Schema::create('shipment_payments', function (Blueprint $table) {
             $table->bigIncrements('id');
 
             $table->foreignId('shipment_id')
                 ->references('id')->on('shipments')
                 ->cascadeOnDelete();
 
-            $table->string('from_status', 30)->nullable();
-            $table->string('to_status', 30);
+            $table->decimal('amount', 14, 2);
+            $table->string('currency', 3)->default('USD'); // USD | UZS
+            $table->decimal('usd_rate', 12, 2)->nullable();
+
+            $table->date('paid_at');
             $table->text('note')->nullable();
 
-            $table->foreignId('changed_by_id')
-                ->nullable()
+            $table->foreignId('created_by_id')
                 ->references('id')->on('telegraph_chats')
-                ->nullOnDelete();
+                ->cascadeOnDelete();
 
             $table->timestamps();
 
-            $table->index(['shipment_id', 'created_at']);
+            $table->index(['shipment_id', 'paid_at']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('shipment_status_logs');
+        Schema::dropIfExists('shipment_payments');
     }
 };
