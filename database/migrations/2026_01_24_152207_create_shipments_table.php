@@ -12,36 +12,27 @@ return new class extends Migration
             $table->bigIncrements('id');
 
             $table->string('track_code', 120)->unique(); // TREK / ORDER ID
-            $table->string('vendor_name')->nullable();   // Xitoy vendor / ta'minotchi
-            $table->string('sender_name')->nullable();   // yuboruvchi (ixtiyoriy)
-            $table->string('receiver_name')->nullable(); // qabul qiluvchi (ixtiyoriy)
-            $table->string('receiver_phone', 50)->nullable();
+            $table->string('order_link')->nullable();   // yuboruvchi (ixtiyoriy)
 
             // O'lchovlar
             $table->decimal('weight_kg', 12, 3)->nullable();
             $table->decimal('volume_m3', 12, 4)->nullable();
-            $table->unsignedInteger('pieces')->nullable();
-
-            // Tarif
-            $table->string('tariff_type', 20)->default('kg'); // kg|m3|piece
-            $table->decimal('tariff_value', 14, 4)->default(0); // masalan 3.2 (USD/kg) yoki UZS/kg
-            $table->string('tariff_currency', 3)->default('USD'); // USD|UZS
-            $table->decimal('usd_rate', 14, 4)->nullable(); // agar UZS ko'rsatmoqchi bo'lsangiz
+            $table->unsignedInteger('pieces');
+            $table->string('client_id', 12)->nullable();
 
             // Status
             $table->string('status', 30)->default('CREATED'); // CREATED, CHINA_WAREHOUSE, ON_THE_WAY...
             $table->timestamp('status_at')->nullable();
 
             // Qo'shimcha
-            $table->text('note')->nullable();
+            $table->string('tariff_type', 5)->default('kg'); // kg, piece, m3
 
             // Audit (kim yaratdi)
-            $table->unsignedBigInteger('created_by_chat_id')->nullable();
+            $table->foreignId('created_by_id')->references('id')->on('telegraph_chats')->cascadeOnDelete();
 
             $table->timestamps();
 
             $table->index(['status', 'created_at']);
-            $table->index(['vendor_name']);
         });
     }
 

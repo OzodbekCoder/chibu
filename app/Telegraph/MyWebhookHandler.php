@@ -2,38 +2,49 @@
 
 namespace App\Telegraph;
 
+use App\Models\Client;
 use App\Models\Shipment;
 use App\Models\TelegraphChat;
 use Carbon\Carbon;
 use DefStudio\Telegraph\Handlers\WebhookHandler;
 use DefStudio\Telegraph\Keyboard\Keyboard;
 use DefStudio\Telegraph\Keyboard\Button;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Stringable;
 
 class MyWebhookHandler extends WebhookHandler
 {
+    const ADMIN_URL = 'https://t.me/Forest_Gamb';
+    const EXAMPLE_TRACK_CODE = 'YT7597474805854';
     public function start(): void
     {
         $this->sendMainMenu();
     }
+    public function new(): void
+    {
+        $this->menuNewShipment();
+    }
 
     protected function sendMainMenu(): void
     {
+        $botUser = $this->getOrCreateBotUser();
+        if ($botUser->is_admin == false) {
+            $this->chat->html("⚠️ Siz hali foydalanuvchi emassiz. <a href=\"" . self::ADMIN_URL . "\">Bekjon</a> akaga murojaat qiling.\n\n")
+                ->withoutPreview()
+                ->send();
+            return;
+        }
         $text = "📦🇨🇳 <b>CHIBU bot</b>\n"
             . "Quyidagilardan birini tanlang:";
 
         $keyboard = Keyboard::make()
             ->row([
                 Button::make("➕ Yangi yuk")->action('menu')->param('a', 'new'),
-                Button::make("📄 Yuklar ro‘yxati")->action('menu')->param('a', 'list'),
+                Button::make("📄 Yuklar ro'yxati")->action('menu')->param('a', 'list'),
             ])
             ->row([
-                Button::make("🔍 Trek bo‘yicha qidirish")->action('menu')->param('a', 'search'),
-            ])
-            ->row([
-                Button::make("💳 To‘lov qo‘shish")->action('menu')->param('a', 'payment'),
-                Button::make("🧾 Xarajat qo‘shish")->action('menu')->param('a', 'expense'),
+                Button::make("🔍 Trek bo'yicha qidirish")->action('menu')->param('a', 'search'),
             ])
             ->row([
                 Button::make("📊 Hisobot")->action('menu')->param('a', 'report'),
@@ -45,10 +56,14 @@ class MyWebhookHandler extends WebhookHandler
     protected function handleChatMessage(Stringable $text): void
     {
         $text = (string) ($this->message?->text() ?? '');
-
         $botUser = $this->getOrCreateBotUser();
         $state = $botUser->state;
-
+        if ($botUser->is_admin == false) {
+            $this->chat->html("⚠️ Siz hali foydalanuvchi emassiz. <a href=\"" . self::ADMIN_URL . "\">Bekjon</a> akaga murojaat qiling.\n\n")
+                ->withoutPreview()
+                ->send();
+            return;
+        }
         // /start, /new kabi commandlarni xohlasangiz shu yerda ham ushlang
         if (Str::startsWith($text, '/new')) {
             $this->startCreateShipment();
@@ -58,23 +73,26 @@ class MyWebhookHandler extends WebhookHandler
         match ($state) {
             'shipment.create.track'       => $this->stepTrack($botUser, $text),
             'shipment.create.amount'      => $this->stepAmount($botUser, $text),
-            'shipment.create.tariff_value' => $this->stepTariffValue($botUser, $text),
-            'shipment.create.currency'    => $this->stepCurrencyManualOrSkip($botUser, $text),
+            'shipment.create.vendor_or_link' => $this->stepVendorOrLink($botUser, $text),
             default                       => $this->chat->html("Menu uchun /start yoki yangi yuk uchun /new yozing.")->send(),
         };
     }
     public function menu(): void
     {
+        if ($this->messageId) {
+            $this->chat->deleteMessage($this->messageId)->send();
+        }
         $action = $this->data->get('a'); // new/list/search/payment/expense/report/settings
-
+        $page = (int) $this->data->get('p', 1);
         match ($action) {
             'new'      => $this->menuNewShipment(),
-            'list'     => $this->menuListShipments(),
+            'list'     => $this->menuListShipments($page),
             'search'   => $this->menuSearchShipment(),
             'payment'  => $this->menuAddPayment(),
             'expense'  => $this->menuAddExpense(),
             'report'   => $this->menuReport(),
             'settings' => $this->menuSettings(),
+            'back' => $this->sendMainMenu(),
             default    => $this->sendMainMenu(),
         };
     }
@@ -85,16 +103,60 @@ class MyWebhookHandler extends WebhookHandler
     {
         // Bu yerda state machine boshlaysiz:
         // state = shipment.create.track
-        $this->chat->html("➕ <b>Yangi yuk</b>\n\nTrek kodni yuboring (masalan: ABC123).")
-            ->send();
         $this->startCreateShipment();
     }
 
-    protected function menuListShipments(): void
+    protected function menuListShipments(int $page = 1): void
     {
-        // Keyin DB’dan oxirgi 10 ta yukni chiqaramiz (keyingi bosqich)
-        $this->chat->html("📄 <b>Yuklar ro‘yxati</b>\n\nHozircha demo. Keyin oxirgi yuklarni chiqaramiz.")
-            ->keyboard($this->backKeyboard())
+        $perPage = 5;
+
+        $shipments = Shipment::where('created_by_id', $this->getOrCreateBotUser()->id)
+            ->latest()->paginate($perPage, ['*'], 'page', $page);
+
+        if ($shipments->isEmpty()) {
+            $this->chat->html("📄 <b>Yuklar ro'yxati bo'sh</b>")
+                ->keyboard($this->backKeyboard())
+                ->send();
+            return;
+        }
+
+        $text = "📄 <b>Yuklar ro'yxati</b>\n\n";
+
+        foreach ($shipments as $shipment) {
+            $text .= "📦 ID: <b>{$shipment->id}</b>\n";
+            $text .= "🚚 Trek: <code>{$shipment->tracking}</code>\n";
+            $text .= "📅 Sana: {$shipment->created_at->format('d.m.Y')}\n\n";
+        }
+
+        $keyboard = Keyboard::make();
+
+        // pagination tugmalari
+        $buttons = [];
+
+        if ($shipments->currentPage() > 1) {
+            $buttons[] = Button::make("⬅️ Oldingi")
+                ->action('menu')
+                ->param('a', 'list')
+                ->param('p', $page - 1);
+        }
+
+        if ($shipments->hasMorePages()) {
+            $buttons[] = Button::make("➡️ Keyingi")
+                ->action('menu')
+                ->param('a', 'list')
+                ->param('p', $page + 1);
+        }
+
+        if (!empty($buttons)) {
+            $keyboard->row($buttons);
+        }
+
+        $keyboard->row([
+            Button::make("⬅️ Orqaga")->action('menu')->param('a', 'back')
+        ]);
+
+        $this->chat->html($text)
+            ->keyboard($keyboard)
             ->send();
     }
 
@@ -147,7 +209,7 @@ class MyWebhookHandler extends WebhookHandler
             'shipment' => []
         ]);
 
-        $this->chat->html("➕ <b>Yangi yuk</b>\n\nTrek kodni yuboring.\nMasalan: <code>ABC123</code>")
+        $this->chat->html("➕ <b>Yangi yuk</b>\n\nTrek kodni yuboring.\nMasalan: <code>" . self::EXAMPLE_TRACK_CODE . "</code>")
             ->send();
     }
 
@@ -241,10 +303,97 @@ class MyWebhookHandler extends WebhookHandler
 
         $this->setState($botUser, 'shipment.create.tariff_value', $payload);
 
-        $this->chat->html("💰 Tarif qiymatini yuboring.\nMasalan: <code>3.2</code> (USD yoki UZS keyin tanlaysiz)")
+        $this->chat->html("🚚 Yetkazish turini tanlang:")
+            ->keyboard(
+                Keyboard::make()->row([
+                    Button::make("✈️ Avia")->action('createShipmentDeliveryType')->param('d', 'avia'),
+                    Button::make("🚛 Avto")->action('createShipmentDeliveryType')->param('d', 'avto'),
+                    Button::make("🚢 Daryo")->action('createShipmentDeliveryType')->param('d', 'sea'),
+                    Button::make("🗿 Boshqa")->action('createShipmentDeliveryType')->param('d', 'other')
+                ])->row([
+                    Button::make("❌ Bekor qilish")->action('createShipmentCancel')
+                ])
+            )
             ->send();
     }
+    protected function stepVendorOrLink(TelegraphChat $botUser, string $text): void
+    {
+        $payload = $botUser->payload ?? [];
 
+        $t = trim($text);
+        if ($t !== '0' && $t !== '') {
+            // agar URL bo‘lsa order_url ga, bo‘lmasa vendor_name ga yozamiz
+            if (filter_var($t, FILTER_VALIDATE_URL)) {
+                $payload['shipment']['order_url'] = $t;
+            } else {
+                $payload['shipment']['vendor_name'] = $t;
+            }
+        }
+
+        // endi client tanlash
+        $this->setState($botUser, 'shipment.create.client', $payload);
+        $this->sendClientPickMenu($botUser, $payload, 1);
+    }
+    protected function sendClientPickMenu(TelegraphChat $botUser, array $payload, int $page = 1): void
+    {
+        $perPage = 8;
+
+        $query = Client::query()->orderBy('id', 'desc'); // xohlagan sort
+        $p = $query->paginate($perPage, ['*'], 'page', $page);
+
+        $kb = Keyboard::make();
+
+        foreach ($p->items() as $client) {
+            $label = ($client->client_id ?? 'Client') . " (" . $client->name . ")";
+            $kb->row([
+                Button::make($label)->action('createShipmentClientPick')->param('cid', $client->client_id),
+            ]);
+        }
+
+        $navRow = [];
+        if ($p->currentPage() > 1) {
+            $navRow[] = Button::make("⬅️ Oldingi")->action('createShipmentClientPage')->param('p', $p->currentPage() - 1);
+        }
+        if ($p->hasMorePages()) {
+            $navRow[] = Button::make("Keyingi ➡️")->action('createShipmentClientPage')->param('p', $p->currentPage() + 1);
+        }
+        if (!empty($navRow)) {
+            $kb->row($navRow);
+        }
+
+        $kb->row([
+            Button::make("❌ Bekor qilish")->action('createShipmentCancel'),
+        ]);
+
+        $this->chat->html("👤 Mijozni tanlang (Client ID):")
+            ->keyboard($kb)
+            ->send();
+    }
+    public function createShipmentClientPage(): void
+    {
+        $botUser = $this->getOrCreateBotUser();
+        $payload = $botUser->payload ?? [];
+        $page = (int) ($this->data->get('p') ?? 1);
+
+        $this->setState($botUser, 'shipment.create.client', $payload);
+        $this->sendClientPickMenu($botUser, $payload, max(1, $page));
+    }
+
+    public function createShipmentClientPick(): void
+    {
+        $botUser = $this->getOrCreateBotUser();
+        $clientId = (string) $this->data->get('cid');
+
+        if ($clientId === '') {
+            $this->chat->html("❌ Client tanlanmadi.")->send();
+            return;
+        }
+
+        $payload = $botUser->payload ?? [];
+        $payload['shipment']['client_id'] = $clientId;
+
+        $this->showConfirm($botUser, $payload);
+    }
     protected function stepTariffValue(TelegraphChat $botUser, string $text): void
     {
         $tariff = $this->parseNumber($text);
@@ -298,7 +447,28 @@ class MyWebhookHandler extends WebhookHandler
         // USD bo'lsa confirm
         $this->showConfirm($botUser, $payload);
     }
+    public function createShipmentDeliveryType(): void
+    {
+        $botUser = $this->getOrCreateBotUser();
+        $type = $this->data->get('d'); // avia|avto
 
+        if (!in_array($type, ['avia', 'avto'], true)) {
+            $this->chat->html("❌ Noto‘g‘ri yetkazish turi.")->send();
+            return;
+        }
+
+        $payload = $botUser->payload ?? [];
+        $payload['shipment']['delivery_type'] = $type;
+
+        // keyingi bosqich: vendor_name yoki url (ixtiyoriy)
+        $this->setState($botUser, 'shipment.create.vendor_or_link', $payload);
+
+        $this->chat->html(
+            "🔗 Buyurtma linki yoki vendor nomini yuboring (ixtiyoriy).\n" .
+                "Masalan: <code>https://example.com/order/123</code> yoki <code>Vendor ABC</code>\n\n" .
+                "O‘tkazib yuborish uchun <code>0</code> yuboring."
+        )->send();
+    }
     // UZS kursini qo'lda kiritish yoki skip
     protected function stepCurrencyManualOrSkip(TelegraphChat $botUser, string $text): void
     {
@@ -328,10 +498,9 @@ class MyWebhookHandler extends WebhookHandler
         $this->setState($botUser, 'shipment.create.confirm', $payload);
 
         $s = $payload['shipment'] ?? [];
+
         $track = $s['track_code'] ?? '-';
         $type  = $s['tariff_type'] ?? '-';
-        $tariff = $s['tariff_value'] ?? 0;
-        $cur   = $s['tariff_currency'] ?? 'USD';
 
         $amountText = match ($type) {
             'kg' => ($s['weight_kg'] ?? 0) . " kg",
@@ -340,14 +509,21 @@ class MyWebhookHandler extends WebhookHandler
             default => '-',
         };
 
+        $delivery = $s['delivery_type'] ?? '-';
+        $clientId = $s['client_id'] ?? '-';
+
         $preview = "✅ <b>Tekshiring:</b>\n"
             . "• Trek: <code>{$track}</code>\n"
             . "• Tarif turi: <b>{$type}</b>\n"
             . "• Miqdor: <b>{$amountText}</b>\n"
-            . "• Tarif: <b>{$tariff} {$cur}</b>\n";
+            . "• Yetkazish: <b>{$delivery}</b>\n"
+            . "• Client ID: <code>{$clientId}</code>\n";
 
-        if (!empty($s['usd_rate'])) {
-            $preview .= "• Kurs: <b>{$s['usd_rate']}</b>\n";
+        if (!empty($s['vendor_name'])) {
+            $preview .= "• Vendor: <b>{$s['vendor_name']}</b>\n";
+        }
+        if (!empty($s['order_url'])) {
+            $preview .= "• Link: <a href=\"{$s['order_url']}\">buyurtma</a>\n";
         }
 
         $preview .= "\nTasdiqlaysizmi?";
@@ -377,20 +553,21 @@ class MyWebhookHandler extends WebhookHandler
         $shipment = Shipment::query()->create([
             'track_code' => $s['track_code'],
             'vendor_name' => $s['vendor_name'] ?? null,
+            'order_link' => $s['order_url'] ?? null,
+            'client_id' => $s['client_id'] ?? null,
             'weight_kg' => $s['weight_kg'] ?? null,
             'volume_m3' => $s['volume_m3'] ?? null,
             'pieces' => $s['pieces'] ?? null,
             'tariff_type' => $s['tariff_type'] ?? 'kg',
-            'tariff_value' => $s['tariff_value'] ?? 0,
-            'tariff_currency' => $s['tariff_currency'] ?? 'USD',
-            'usd_rate' => $s['usd_rate'] ?? null,
             'status' => 'CREATED',
             'status_at' => Carbon::now(),
-            'created_by_chat_id' => $botUser->chat_id
+            'created_by_id' => $botUser->id
         ]);
 
         $this->clearState($botUser);
-
+        if ($this->messageId) {
+            $this->chat->deleteMessage($this->messageId)->send();
+        }
         $this->chat->html("🎉 Saqlandi!\n\n📦 Yuk ID: <b>{$shipment->id}</b>\nTrek: <code>{$shipment->track_code}</code>")
             ->send();
 
@@ -417,11 +594,11 @@ class MyWebhookHandler extends WebhookHandler
         return TelegraphChat::query()->firstOrCreate(
             ['chat_id' => $chatId],
             [
-                'username' => $this->message?->from()?->username(),
-                'first_name' => $this->message?->from()?->firstName(),
-                'last_name' => $this->message?->from()?->lastName(),
+                'name' => $this->message?->from()?->username() ?? $this->message?->from()?->firstName() ?? 'User' . $chatId,
                 'state' => null,
                 'payload' => null,
+                'last_seen_at' => Carbon::now(),
+                'is_admin' => false
             ]
         );
     }

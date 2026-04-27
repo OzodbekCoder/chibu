@@ -6,21 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Shipment extends Model
 {
-    protected $fillable = [
-        'track_code',
-        'vendor_name',
-        'weight_kg',
-        'volume_m3',
-        'pieces',
-        'tariff_type',
-        'tariff_value',
-        'tariff_currency',
-        'usd_rate',
-        'status',
-        'status_at',
-        'note',
-        'created_by_telegram_id'
-    ];
+    protected $guarded = [];
 
     protected $casts = [
         'weight_kg' => 'decimal:3',
