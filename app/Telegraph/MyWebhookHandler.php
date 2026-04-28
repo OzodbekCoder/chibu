@@ -85,6 +85,7 @@ class MyWebhookHandler extends WebhookHandler
             'shipment.create.price_yuan'     => $this->stepPriceYuan($botUser, $text),
             'shipment.create.vendor_or_link' => $this->stepVendorOrLink($botUser, $text),
             'shipment.create.note'           => $this->stepNote($botUser, $text),
+            'shipment.search.track'          => $this->stepSearchTrack($botUser, $text),
             'client.create.name'             => $this->stepClientName($botUser, $text),
             'client.create.phone'            => $this->stepClientPhone($botUser, $text),
             'settings.yuan_rate'             => $this->stepYuanRate($botUser, $text),
@@ -190,13 +191,13 @@ class MyWebhookHandler extends WebhookHandler
                         'Ulugchat' => '🛂 Xitoy chegara punkti',
                         'Osh'      => '🏔 O\'zbekiston chegara punkti',
                         'DropZone' => '📍 Qabul qilish punkti',
-                        'Delivered'=> '✅ Qabul qilindi',
+                        'Delivered' => '✅ Qabul qilindi',
                         'CREATED'  => '🆕 Yangi yaratildi',
                         'Yiwu'     => '🚀 Xitoydan yo\'lga chiqdi',
                     ];
                     $iPayMap = [
                         'PAID'     => "✅ To'landi",
-                        'UN_BILLED'=> "⏳ To'lanmadi",
+                        'UN_BILLED' => "⏳ To'lanmadi",
                     ];
                     $rawStatus = $ii['status'] ?? '';
                     $iStatus   = $iStatusMap[$rawStatus] ?? ('🏭 Omborda (' . $rawStatus . ')');
@@ -211,14 +212,14 @@ class MyWebhookHandler extends WebhookHandler
 
                     $pieces       = (int)($shipment->pieces ?? 0);
                     $goodsUzs     = $yuanRate > 0 && $shipment->price_yuan
-                                    ? (float)$shipment->price_yuan * $yuanRate
-                                    : 0;
+                        ? (float)$shipment->price_yuan * $yuanRate
+                        : 0;
                     $deliveryUzs  = (float)($ii['payAmountSom'] ?? 0);
                     $totalUzs     = $goodsUzs + $deliveryUzs;
                     if ($pieces > 0 && $totalUzs > 0) {
                         $perPiece = $totalUzs / $pieces;
                         $text .= "   💰 Jami: " . number_format((int)$totalUzs) . " so'm"
-                               . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
+                            . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
                     }
                 } else {
                     $text .= "🌐 IPOST: #<code>{$shipment->ipost_id}</code>\n";
@@ -252,7 +253,128 @@ class MyWebhookHandler extends WebhookHandler
 
     protected function menuSearchShipment(): void
     {
-        $this->chat->html("🔍 <b>Qidirish</b>\n\nTrek kodni yuboring.")
+        $botUser = $this->getOrCreateBotUser();
+        $this->setState($botUser, 'shipment.search.track', []);
+
+        $this->chat->html("🔍 <b>Qidirish</b>\n\nTrek kodni yuboring")
+            ->keyboard($this->backKeyboard())
+            ->send();
+    }
+
+    protected function stepSearchTrack(TelegraphChat $botUser, string $text): void
+    {
+        $track = $this->normalizeTrack($text);
+
+        if (mb_strlen($track) < 3) {
+            $this->chat->html("❌ Trek kod juda qisqa. Qaytadan yuboring.")->send();
+            return;
+        }
+
+        $shipments = Shipment::with('client')
+            ->where('created_by_id', $botUser->id)
+            ->where('track_code', 'like', '%' . $track . '%')
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        if ($shipments->isEmpty()) {
+            $this->chat->html("❌ <b>Topilmadi</b>\n\n<code>{$track}</code> bo'yicha yuk yo'q.\n\nBoshqa trek kodni yuboring:")
+                ->keyboard($this->backKeyboard())
+                ->send();
+            return;
+        }
+
+        $statusLabel = [
+            'CREATED'         => '🆕 Yaratildi',
+            'CHINA_WAREHOUSE' => '🏭 Xitoy ombori',
+            'ON_THE_WAY'      => '🚛 Yo\'lda',
+            'CUSTOMS'         => '📋 Bojxona',
+            'DELIVERED'       => '✅ Yetkazildi',
+            'CANCELLED'       => '❌ Bekor',
+        ];
+
+        $deliveryLabel = [
+            'avia'  => '✈️ Avia',
+            'avto'  => '🚛 Avto',
+            'sea'   => '🚢 Daryo',
+            'other' => '📦 Boshqa',
+        ];
+
+        $ipostMap = $this->fetchIpostMap($shipments->pluck('ipost_id')->filter()->values()->all());
+        $yuanRate = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
+
+        $count = $shipments->count();
+        $resultText = "🔍 <b>Natija</b> ({$count} ta):\n━━━━━━━━━━━━━━━━━━\n\n";
+
+        foreach ($shipments as $shipment) {
+            $amountText = match ($shipment->tariff_type) {
+                'kg'    => ($shipment->weight_kg ?? 0) . ' kg',
+                'm3'    => ($shipment->volume_m3 ?? 0) . ' m³',
+                'piece' => ($shipment->pieces ?? 0) . ' dona',
+                default => '-',
+            };
+
+            $status   = $statusLabel[$shipment->status] ?? $shipment->status;
+            $delivery = $deliveryLabel[$shipment->delivery_type] ?? $shipment->delivery_type;
+            $client   = $shipment->client?->name ?? '—';
+            $yuan     = $shipment->price_yuan ? number_format((float)$shipment->price_yuan, 2) . ' ¥' : '—';
+            $link     = $shipment->order_url
+                ? "\n🔗 <a href=\"{$shipment->order_url}\">" . mb_strimwidth($shipment->order_url, 0, 40, '…') . '</a>'
+                : '';
+
+            $resultText .= "📦 <b>#{$shipment->id}</b> · <code>{$shipment->track_code}</code>\n";
+            $resultText .= "👤 {$client}  💴 {$yuan}{$link}\n";
+            $resultText .= "⚖️ {$amountText}  {$delivery}\n";
+            $resultText .= "📊 {$status}  ·  📅 {$shipment->created_at->format('d.m.Y H:i:s')}\n";
+
+            if ($shipment->ipost_id) {
+                $ii = $ipostMap[(string)$shipment->ipost_id] ?? null;
+                if ($ii) {
+                    $iStatusMap = [
+                        'Ulugchat' => '🛂 Xitoy chegara punkti',
+                        'Osh'      => '🏔 O\'zbekiston chegara punkti',
+                        'DropZone' => '📍 Qabul qilish punkti',
+                        'Delivered' => '✅ Qabul qilindi',
+                        'CREATED'  => '🆕 Yangi yaratildi',
+                        'Yiwu'     => '🚀 Xitoydan yo\'lga chiqdi',
+                    ];
+                    $iPayMap = [
+                        'PAID'      => "✅ To'landi",
+                        'UN_BILLED' => "⏳ To'lanmadi",
+                    ];
+                    $rawStatus = $ii['status'] ?? '';
+                    $iStatus   = $iStatusMap[$rawStatus] ?? ('🏭 Omborda (' . $rawStatus . ')');
+                    $rawPay    = $ii['payStatus'] ?? '';
+                    $iPayLabel = $iPayMap[$rawPay] ?? $rawPay;
+                    $iWeight   = isset($ii['weight']) ? $ii['weight'] . ' kg' : '—';
+                    $iPay      = isset($ii['payAmountSom']) ? number_format((int)$ii['payAmountSom']) . " so'm" : '—';
+                    $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
+                    $imgLink   = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
+                    $resultText .= "🌐 IPOST #{$shipment->ipost_id}: {$iStatus}\n";
+                    $resultText .= "   ⚖️ {$iWeight}  💳 {$iPay}  {$iPayLabel}{$imgLink}\n";
+
+                    $pieces      = (int)($shipment->pieces ?? 0);
+                    $goodsUzs    = $yuanRate > 0 && $shipment->price_yuan ? (float)$shipment->price_yuan * $yuanRate : 0;
+                    $deliveryUzs = (float)($ii['payAmountSom'] ?? 0);
+                    $totalUzs    = $goodsUzs + $deliveryUzs;
+                    if ($pieces > 0 && $totalUzs > 0) {
+                        $perPiece = $totalUzs / $pieces;
+                        $resultText .= "   💰 Jami: " . number_format((int)$totalUzs) . " so'm"
+                            . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
+                    }
+                } else {
+                    $resultText .= "🌐 IPOST: #<code>{$shipment->ipost_id}</code>\n";
+                }
+            } else {
+                $resultText .= "🌐 IPOST: ➖\n";
+            }
+
+            $resultText .= "\n";
+        }
+
+        $this->clearState($botUser);
+        $this->chat->html($resultText)
+            ->keyboard($this->backKeyboard())
             ->send();
     }
 
@@ -270,9 +392,139 @@ class MyWebhookHandler extends WebhookHandler
 
     protected function menuReport(): void
     {
-        $this->chat->html("📊 <b>Hisobot</b>\n\nTanlang: Kunlik / Haftalik / Oylik (keyingi bosqichda qilamiz).")
-            ->keyboard($this->backKeyboard())
+        $this->chat->html("📊 <b>Hisobot</b>\n\nHisobot turini tanlang:")
+            ->keyboard(
+                Keyboard::make()
+                    ->row([
+                        Button::make("📅 Kunlik")->action('reportExport')->param('period', 'day'),
+                        Button::make("📆 Haftalik")->action('reportExport')->param('period', 'week'),
+                        Button::make("🗓 Oylik")->action('reportExport')->param('period', 'month'),
+                    ])
+                    ->row([Button::make("⬅️ Orqaga")->action('menu')->param('a', 'back')])
+            )
             ->send();
+    }
+
+    public function reportExport(): void
+    {
+        $botUser = $this->getOrCreateBotUser();
+        $period  = $this->data->get('period') ?? 'day';
+
+        if ($this->messageId) {
+            $this->chat->deleteMessage($this->messageId)->send();
+        }
+
+        $this->chat->html("⏳ Hisobot tayyorlanmoqda...")->send();
+
+        $from = match ($period) {
+            'week'  => Carbon::now()->startOfWeek(),
+            'month' => Carbon::now()->startOfMonth(),
+            default => Carbon::today(),
+        };
+
+        $shipments = Shipment::with('client')
+            ->where('created_by_id', $botUser->id)
+            ->where('created_at', '>=', $from)
+            ->latest()
+            ->get();
+
+        $ipostMap = $this->fetchIpostMap(
+            $shipments->pluck('ipost_id')->filter()->values()->all()
+        );
+        $yuanRate = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+
+        $headers = [
+            'ID', 'Trek Raqam', 'Mijoz', 'Izoh', 'Tovar soni',
+            'Tovar narxi (¥)', 'Status', 'Buyurtma sanasi',
+            "IPOST dan mi (ha/yo'q)", "Yo'l haqqi (so'm)",
+            "Bir tovarning tannarxi (so'm)", 'Link', 'Pochta turi',
+        ];
+
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValue([$col + 1, 1], $header);
+        }
+        $headerStyle = $sheet->getStyle('A1:M1');
+        $headerStyle->getFont()->setBold(true);
+        $headerStyle->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFFFFF00');
+
+        $statusLabel = [
+            'CREATED'         => 'Yaratildi',
+            'CHINA_WAREHOUSE' => 'Xitoy ombori',
+            'ON_THE_WAY'      => "Yo'lda",
+            'CUSTOMS'         => 'Bojxona',
+            'DELIVERED'       => 'Yetkazildi',
+            'CANCELLED'       => 'Bekor',
+        ];
+
+        $deliveryLabel = [
+            'avia'  => 'Avia',
+            'avto'  => 'Avto',
+            'sea'   => 'Daryo',
+            'other' => 'Boshqa',
+        ];
+
+        $row = 2;
+        foreach ($shipments as $shipment) {
+            $pieces      = (int) ($shipment->pieces ?? 0);
+            $ipost       = $ipostMap[(string) $shipment->ipost_id] ?? null;
+            $deliveryUzs = (float) ($ipost['payAmountSom'] ?? 0);
+            $goodsUzs    = ($yuanRate > 0 && $shipment->price_yuan)
+                           ? (float) $shipment->price_yuan * $yuanRate
+                           : 0;
+            $totalUzs    = $goodsUzs + $deliveryUzs;
+            $perPiece    = ($pieces > 0 && $totalUzs > 0) ? (int) ($totalUzs / $pieces) : null;
+
+            $tovarSoni = match ($shipment->tariff_type) {
+                'kg'    => ($shipment->weight_kg ?? 0) . ' kg',
+                'm3'    => ($shipment->volume_m3 ?? 0) . ' m³',
+                'piece' => $pieces,
+                default => '-',
+            };
+
+            $sheet->setCellValue([1,  $row], $shipment->id);
+            $sheet->setCellValue([2,  $row], $shipment->track_code);
+            $sheet->setCellValue([3,  $row], $shipment->client?->name ?? '');
+            $sheet->setCellValue([4,  $row], $shipment->note ?? '');
+            $sheet->setCellValue([5,  $row], $tovarSoni);
+            $sheet->setCellValue([6,  $row], $shipment->price_yuan ? (float) $shipment->price_yuan : '');
+            $sheet->setCellValue([7,  $row], $statusLabel[$shipment->status] ?? $shipment->status);
+            $sheet->setCellValue([8,  $row], $shipment->created_at->format('d.m.Y H:i'));
+            $sheet->setCellValue([9,  $row], $shipment->ipost_id ? 'Ha' : "Yo'q");
+            $sheet->setCellValue([10, $row], $deliveryUzs > 0 ? (int) $deliveryUzs : '');
+            $sheet->setCellValue([11, $row], $perPiece);
+            $sheet->setCellValue([12, $row], $shipment->order_url ?? '');
+            $sheet->setCellValue([13, $row], $deliveryLabel[$shipment->delivery_type] ?? $shipment->delivery_type);
+
+            $row++;
+        }
+
+        foreach (range(1, 13) as $col) {
+            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+        }
+
+        $periodLabel = match ($period) {
+            'week'  => 'haftalik',
+            'month' => 'oylik',
+            default => 'kunlik',
+        };
+        $filename = 'hisobot_' . $periodLabel . '_' . Carbon::now()->format('Y-m-d') . '.xlsx';
+        $path     = storage_path('app/' . $filename);
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($path);
+
+        $count = $shipments->count();
+        $this->chat->document($path)
+            ->html("📊 <b>" . ucfirst($periodLabel) . " hisobot</b>\n{$count} ta yuk · " . $from->format('d.m.Y') . " — " . Carbon::today()->format('d.m.Y'))
+            ->send();
+
+        @unlink($path);
+        $this->sendMainMenu();
     }
 
     protected function menuSettings(): void
