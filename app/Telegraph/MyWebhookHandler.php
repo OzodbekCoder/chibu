@@ -159,9 +159,22 @@ class MyWebhookHandler extends WebhookHandler
             'other' => '📦 Boshqa',
         ];
 
-        // Fetch live IPOST data for shipments that have ipost_id
-        $ipostMap  = $this->fetchIpostMap($shipments->getCollection()->pluck('ipost_id')->filter()->values()->all());
+        $ipostMap  = $this->fetchIpostByTrackMap();
         $yuanRate  = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
+
+        $iStatusMap = [
+            'Warehouse' => '🏭 Xitoy ombori',
+            'Ulugchat'  => '🛂 Xitoy chegara punkti',
+            'Osh'       => "🏔 O'zbekiston chegara punkti",
+            'DropZone'  => '📍 Qabul qilish punkti',
+            'Delivered' => '✅ Qabul qilindi',
+            'CREATED'   => '🆕 Yangi yaratildi',
+            'Yiwu'      => "🚀 Xitoydan yo'lga chiqdi",
+        ];
+        $iPayMap = [
+            'PAID'      => "✅ To'landi",
+            'UN_BILLED' => "⏳ To'lanmadi",
+        ];
 
         foreach ($shipments as $shipment) {
             $amountText = match ($shipment->tariff_type) {
@@ -184,46 +197,30 @@ class MyWebhookHandler extends WebhookHandler
             $text .= "⚖️ {$amountText}  {$delivery}\n";
             $text .= "📊 {$status}  ·  📅 {$shipment->created_at->format('d.m.Y H:i:s')}\n";
 
-            if ($shipment->ipost_id) {
-                $ii = $ipostMap[(string)$shipment->ipost_id] ?? null;
-                if ($ii) {
-                    $iStatusMap = [
-                        'Ulugchat' => '🛂 Xitoy chegara punkti',
-                        'Osh'      => '🏔 O\'zbekiston chegara punkti',
-                        'DropZone' => '📍 Qabul qilish punkti',
-                        'Delivered' => '✅ Qabul qilindi',
-                        'CREATED'  => '🆕 Yangi yaratildi',
-                        'Yiwu'     => '🚀 Xitoydan yo\'lga chiqdi',
-                    ];
-                    $iPayMap = [
-                        'PAID'     => "✅ To'landi",
-                        'UN_BILLED' => "⏳ To'lanmadi",
-                    ];
-                    $rawStatus = $ii['status'] ?? '';
-                    $iStatus   = $iStatusMap[$rawStatus] ?? ('🏭 Omborda (' . $rawStatus . ')');
-                    $rawPay    = $ii['payStatus'] ?? '';
-                    $iPayLabel = $iPayMap[$rawPay] ?? $rawPay;
-                    $iWeight   = isset($ii['weight']) ? $ii['weight'] . ' kg' : '—';
-                    $iPay      = isset($ii['payAmountSom']) ? number_format((int)$ii['payAmountSom']) . " so'm" : '—';
-                    $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
-                    $imgLink   = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
-                    $text .= "🌐 IPOST #{$shipment->ipost_id}: {$iStatus}\n";
-                    $text .= "   ⚖️ {$iWeight}  🚚 Yolkiro: {$iPay}  {$iPayLabel}{$imgLink}\n";
+            $ii = $ipostMap[mb_strtoupper($shipment->track_code)] ?? null;
+            if ($ii) {
+                $rawStatus = $ii['status'] ?? '';
+                $iStatus   = $iStatusMap[$rawStatus] ?? ('🏭 ' . $rawStatus);
+                $rawPay    = $ii['payStatus'] ?? '';
+                $iPayLabel = $iPayMap[$rawPay] ?? $rawPay;
+                $iPaySom   = (int)($ii['payAmountSom'] ?? 0);
+                $iPay      = $iPaySom > 0 ? number_format($iPaySom) . " so'm" : "—";
+                $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
+                $imgLink   = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
+                $ipostLabel = $shipment->ipost_id ? "IPOST #{$shipment->ipost_id}" : "IPOST";
+                $text .= "🌐 {$ipostLabel}: {$iStatus}\n";
+                $text .= "   🚚 Yolkiro: {$iPay}  {$iPayLabel}{$imgLink}\n";
 
-                    $pieces       = (int)($shipment->pieces ?? 0);
-                    $goodsUzs     = $yuanRate > 0 && $shipment->price_yuan
-                        ? (float)$shipment->price_yuan * $yuanRate
-                        : 0;
-                    $deliveryUzs  = (float)($ii['payAmountSom'] ?? 0);
-                    $totalUzs     = $goodsUzs + $deliveryUzs;
-                    if ($pieces > 0 && $totalUzs > 0) {
-                        $perPiece = $totalUzs / $pieces;
-                        $text .= "   💰 Jami: " . number_format((int)$totalUzs) . " so'm"
-                            . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
-                    }
-                } else {
-                    $text .= "🌐 IPOST: #<code>{$shipment->ipost_id}</code>\n";
+                $pieces      = (int)($shipment->pieces ?? 0);
+                $goodsUzs    = $yuanRate > 0 && $shipment->price_yuan ? (float)$shipment->price_yuan * $yuanRate : 0;
+                $totalUzs    = $goodsUzs + $iPaySom;
+                if ($pieces > 0 && $totalUzs > 0) {
+                    $perPiece = $totalUzs / $pieces;
+                    $text .= "   💰 Jami: " . number_format((int)$totalUzs) . " so'm"
+                        . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
                 }
+            } elseif ($shipment->ipost_id) {
+                $text .= "🌐 IPOST: #<code>{$shipment->ipost_id}</code>\n";
             } else {
                 $text .= "🌐 IPOST: ➖\n";
             }
@@ -300,8 +297,22 @@ class MyWebhookHandler extends WebhookHandler
             'other' => '📦 Boshqa',
         ];
 
-        $ipostMap = $this->fetchIpostMap($shipments->pluck('ipost_id')->filter()->values()->all());
+        $ipostMap = $this->fetchIpostByTrackMap();
         $yuanRate = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
+
+        $iStatusMap = [
+            'Warehouse' => '🏭 Xitoy ombori',
+            'Ulugchat'  => '🛂 Xitoy chegara punkti',
+            'Osh'       => "🏔 O'zbekiston chegara punkti",
+            'DropZone'  => '📍 Qabul qilish punkti',
+            'Delivered' => '✅ Qabul qilindi',
+            'CREATED'   => '🆕 Yangi yaratildi',
+            'Yiwu'      => "🚀 Xitoydan yo'lga chiqdi",
+        ];
+        $iPayMap = [
+            'PAID'      => "✅ To'landi",
+            'UN_BILLED' => "⏳ To'lanmadi",
+        ];
 
         $count = $shipments->count();
         $resultText = "🔍 <b>Natija</b> ({$count} ta):\n━━━━━━━━━━━━━━━━━━\n\n";
@@ -327,44 +338,30 @@ class MyWebhookHandler extends WebhookHandler
             $resultText .= "⚖️ {$amountText}  {$delivery}\n";
             $resultText .= "📊 {$status}  ·  📅 {$shipment->created_at->format('d.m.Y H:i:s')}\n";
 
-            if ($shipment->ipost_id) {
-                $ii = $ipostMap[(string)$shipment->ipost_id] ?? null;
-                if ($ii) {
-                    $iStatusMap = [
-                        'Ulugchat' => '🛂 Xitoy chegara punkti',
-                        'Osh'      => '🏔 O\'zbekiston chegara punkti',
-                        'DropZone' => '📍 Qabul qilish punkti',
-                        'Delivered' => '✅ Qabul qilindi',
-                        'CREATED'  => '🆕 Yangi yaratildi',
-                        'Yiwu'     => '🚀 Xitoydan yo\'lga chiqdi',
-                    ];
-                    $iPayMap = [
-                        'PAID'      => "✅ To'landi",
-                        'UN_BILLED' => "⏳ To'lanmadi",
-                    ];
-                    $rawStatus = $ii['status'] ?? '';
-                    $iStatus   = $iStatusMap[$rawStatus] ?? ('🏭 Omborda (' . $rawStatus . ')');
-                    $rawPay    = $ii['payStatus'] ?? '';
-                    $iPayLabel = $iPayMap[$rawPay] ?? $rawPay;
-                    $iWeight   = isset($ii['weight']) ? $ii['weight'] . ' kg' : '—';
-                    $iPay      = isset($ii['payAmountSom']) ? number_format((int)$ii['payAmountSom']) . " so'm" : '—';
-                    $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
-                    $imgLink   = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
-                    $resultText .= "🌐 IPOST #{$shipment->ipost_id}: {$iStatus}\n";
-                    $resultText .= "   ⚖️ {$iWeight}  🚚 Yolkiro: {$iPay}  {$iPayLabel}{$imgLink}\n";
+            $ii = $ipostMap[mb_strtoupper($shipment->track_code)] ?? null;
+            if ($ii) {
+                $rawStatus  = $ii['status'] ?? '';
+                $iStatus    = $iStatusMap[$rawStatus] ?? ('🏭 ' . $rawStatus);
+                $rawPay     = $ii['payStatus'] ?? '';
+                $iPayLabel  = $iPayMap[$rawPay] ?? $rawPay;
+                $iPaySom    = (int)($ii['payAmountSom'] ?? 0);
+                $iPay       = $iPaySom > 0 ? number_format($iPaySom) . " so'm" : "—";
+                $iImg       = $ii['images'][1] ?? ($ii['images'][0] ?? null);
+                $imgLink    = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
+                $ipostLabel = $shipment->ipost_id ? "IPOST #{$shipment->ipost_id}" : "IPOST";
+                $resultText .= "🌐 {$ipostLabel}: {$iStatus}\n";
+                $resultText .= "   🚚 Yolkiro: {$iPay}  {$iPayLabel}{$imgLink}\n";
 
-                    $pieces      = (int)($shipment->pieces ?? 0);
-                    $goodsUzs    = $yuanRate > 0 && $shipment->price_yuan ? (float)$shipment->price_yuan * $yuanRate : 0;
-                    $deliveryUzs = (float)($ii['payAmountSom'] ?? 0);
-                    $totalUzs    = $goodsUzs + $deliveryUzs;
-                    if ($pieces > 0 && $totalUzs > 0) {
-                        $perPiece = $totalUzs / $pieces;
-                        $resultText .= "   💰 Jami: " . number_format((int)$totalUzs) . " so'm"
-                            . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
-                    }
-                } else {
-                    $resultText .= "🌐 IPOST: #<code>{$shipment->ipost_id}</code>\n";
+                $pieces   = (int)($shipment->pieces ?? 0);
+                $goodsUzs = $yuanRate > 0 && $shipment->price_yuan ? (float)$shipment->price_yuan * $yuanRate : 0;
+                $totalUzs = $goodsUzs + $iPaySom;
+                if ($pieces > 0 && $totalUzs > 0) {
+                    $perPiece = $totalUzs / $pieces;
+                    $resultText .= "   💰 Jami: " . number_format((int)$totalUzs) . " so'm"
+                        . "  |  1 dona: <b>" . number_format((int)$perPiece) . " so'm</b>\n";
                 }
+            } elseif ($shipment->ipost_id) {
+                $resultText .= "🌐 IPOST: #<code>{$shipment->ipost_id}</code>\n";
             } else {
                 $resultText .= "🌐 IPOST: ➖\n";
             }
@@ -428,9 +425,7 @@ class MyWebhookHandler extends WebhookHandler
             ->latest()
             ->get();
 
-        $ipostMap = $this->fetchIpostMap(
-            $shipments->pluck('ipost_id')->filter()->values()->all()
-        );
+        $ipostMap = $this->fetchIpostByTrackMap();
         $yuanRate = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
@@ -472,7 +467,7 @@ class MyWebhookHandler extends WebhookHandler
         $row = 2;
         foreach ($shipments as $shipment) {
             $pieces      = (int) ($shipment->pieces ?? 0);
-            $ipost       = $ipostMap[(string) $shipment->ipost_id] ?? null;
+            $ipost       = $ipostMap[mb_strtoupper($shipment->track_code)] ?? null;
             $deliveryUzs = (float) ($ipost['payAmountSom'] ?? 0);
             $goodsUzs    = ($yuanRate > 0 && $shipment->price_yuan)
                            ? (float) $shipment->price_yuan * $yuanRate
@@ -1223,13 +1218,11 @@ class MyWebhookHandler extends WebhookHandler
     // ====== IPOST API ======
 
     /**
-     * @param  string[] $ipostIds
+     * Fetch all parcels from IPOST and index by trackingNumber (uppercased).
      * @return array<string, array>
      */
-    protected function fetchIpostMap(array $ipostIds): array
+    protected function fetchIpostByTrackMap(): array
     {
-        if (empty($ipostIds)) return [];
-
         $endpoint = rtrim(env('IPOST_ADD_ENDPOINT', ''), '/');
         $apiKey   = env('IPOST_API_KEY', '');
         if (!$endpoint || !$apiKey) return [];
@@ -1241,23 +1234,22 @@ class MyWebhookHandler extends WebhookHandler
             'source'      => 'TELEGRAM',
         ];
 
-        $result = [];
-        foreach ($ipostIds as $ipostId) {
-            try {
-                /** @var \Illuminate\Http\Client\Response $res */
-                $res = Http::withHeaders($headers)->timeout(8)->get("{$endpoint}/{$ipostId}");
-                if (!$res->successful()) continue;
+        try {
+            $res = Http::withHeaders($headers)->timeout(15)->get($endpoint);
+            if (!$res->successful()) return [];
 
-                $data = $res->json();
-                $item = \is_array($data) && array_is_list($data) ? ($data[0] ?? null) : $data;
-                if (\is_array($item) && isset($item['id'])) {
-                    $result[(string)$item['id']] = $item;
+            $data   = $res->json();
+            $items  = \is_array($data) && \array_is_list($data) ? $data : (isset($data['trackingNumber']) ? [$data] : []);
+            $result = [];
+            foreach ($items as $item) {
+                if (!empty($item['trackingNumber'])) {
+                    $result[mb_strtoupper($item['trackingNumber'])] = $item;
                 }
-            } catch (\Throwable) {
-                // skip failed fetches silently
             }
+            return $result;
+        } catch (\Throwable) {
+            return [];
         }
-        return $result;
     }
 
     protected function callIpostApi(Shipment $shipment): void
