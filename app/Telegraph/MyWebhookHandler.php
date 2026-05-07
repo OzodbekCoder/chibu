@@ -208,7 +208,7 @@ class MyWebhookHandler extends WebhookHandler
                     $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
                     $imgLink   = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
                     $text .= "🌐 IPOST #{$shipment->ipost_id}: {$iStatus}\n";
-                    $text .= "   ⚖️ {$iWeight}  💳 {$iPay}  {$iPayLabel}{$imgLink}\n";
+                    $text .= "   ⚖️ {$iWeight}  🚚 Yolkiro: {$iPay}  {$iPayLabel}{$imgLink}\n";
 
                     $pieces       = (int)($shipment->pieces ?? 0);
                     $goodsUzs     = $yuanRate > 0 && $shipment->price_yuan
@@ -351,7 +351,7 @@ class MyWebhookHandler extends WebhookHandler
                     $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
                     $imgLink   = $iImg ? "  <a href=\"{$iImg}\">🖼 Rasm</a>" : '';
                     $resultText .= "🌐 IPOST #{$shipment->ipost_id}: {$iStatus}\n";
-                    $resultText .= "   ⚖️ {$iWeight}  💳 {$iPay}  {$iPayLabel}{$imgLink}\n";
+                    $resultText .= "   ⚖️ {$iWeight}  🚚 Yolkiro: {$iPay}  {$iPayLabel}{$imgLink}\n";
 
                     $pieces      = (int)($shipment->pieces ?? 0);
                     $goodsUzs    = $yuanRate > 0 && $shipment->price_yuan ? (float)$shipment->price_yuan * $yuanRate : 0;
@@ -439,14 +439,15 @@ class MyWebhookHandler extends WebhookHandler
         $headers = [
             'ID', 'Trek Raqam', 'Mijoz', 'Izoh', 'Tovar soni',
             'Tovar narxi (¥)', 'Status', 'Buyurtma sanasi',
-            "IPOST dan mi (ha/yo'q)", "Yo'l haqqi (so'm)",
-            "Bir tovarning tannarxi (so'm)", 'Link', 'Pochta turi',
+            "IPOST dan mi (ha/yo'q)", "IPOST Status",
+            "Yo'l haqqi (so'm)", "Bir tovarning tannarxi (so'm)",
+            'Link', 'Pochta turi',
         ];
 
         foreach ($headers as $col => $header) {
             $sheet->setCellValue([$col + 1, 1], $header);
         }
-        $headerStyle = $sheet->getStyle('A1:M1');
+        $headerStyle = $sheet->getStyle('A1:N1');
         $headerStyle->getFont()->setBold(true);
         $headerStyle->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
@@ -486,8 +487,19 @@ class MyWebhookHandler extends WebhookHandler
                 default => '-',
             };
 
+            $ipostStatusLabels = [
+                'Ulugchat'  => "Xitoy chegara",
+                'Osh'       => "UZ chegara",
+                'DropZone'  => "Qabul punkti",
+                'Delivered' => "Qabul qilindi",
+                'CREATED'   => "Yangi",
+                'Yiwu'      => "Xitoydan chiqdi",
+            ];
+            $rawIpostStatus  = $ipost['status'] ?? '';
+            $ipostStatusText = $rawIpostStatus ? ($ipostStatusLabels[$rawIpostStatus] ?? $rawIpostStatus) : '';
+
             $sheet->setCellValue([1,  $row], $shipment->id);
-            $sheet->setCellValue([2,  $row], $shipment->track_code);
+            $sheet->setCellValueExplicit([2, $row], $shipment->track_code, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue([3,  $row], $shipment->client?->name ?? '');
             $sheet->setCellValue([4,  $row], $shipment->note ?? '');
             $sheet->setCellValue([5,  $row], $tovarSoni);
@@ -495,15 +507,26 @@ class MyWebhookHandler extends WebhookHandler
             $sheet->setCellValue([7,  $row], $statusLabel[$shipment->status] ?? $shipment->status);
             $sheet->setCellValue([8,  $row], $shipment->created_at->format('d.m.Y H:i'));
             $sheet->setCellValue([9,  $row], $shipment->ipost_id ? 'Ha' : "Yo'q");
-            $sheet->setCellValue([10, $row], $deliveryUzs > 0 ? (int) $deliveryUzs : '');
-            $sheet->setCellValue([11, $row], $perPiece);
-            $sheet->setCellValue([12, $row], $shipment->order_url ?? '');
-            $sheet->setCellValue([13, $row], $deliveryLabel[$shipment->delivery_type] ?? $shipment->delivery_type);
+            $sheet->setCellValue([10, $row], $ipostStatusText);
+            $sheet->setCellValue([11, $row], $deliveryUzs > 0 ? (int) $deliveryUzs : '');
+            $sheet->setCellValue([12, $row], $perPiece);
+            $sheet->setCellValue([13, $row], $shipment->order_url ?? '');
+            $sheet->setCellValue([14, $row], $deliveryLabel[$shipment->delivery_type] ?? $shipment->delivery_type);
 
             $row++;
         }
 
-        foreach (range(1, 13) as $col) {
+        $lastDataRow = $row - 1;
+        $sheet->setCellValue([1,  $row], 'Jami:');
+        $sheet->setCellValue([5,  $row], "=SUM(E2:E{$lastDataRow})");
+        $sheet->setCellValue([6,  $row], "=SUM(F2:F{$lastDataRow})");
+        $sheet->setCellValue([11, $row], "=SUM(K2:K{$lastDataRow})");
+        $sheet->getStyle('A' . $row . ':N' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFDDDDDD');
+
+        foreach (range(1, 14) as $col) {
             $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
         }
 
