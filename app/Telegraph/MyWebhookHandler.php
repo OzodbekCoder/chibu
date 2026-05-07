@@ -1229,7 +1229,7 @@ class MyWebhookHandler extends WebhookHandler
 
         $headers = [
             'x-apikey'    => $apiKey,
-            'x-timestamp' => (string) time(),
+            'x-timestamp' => 1777288697,
             'x-chat-id'   => (string) $this->chat->chat_id,
             'source'      => 'TELEGRAM',
         ];
