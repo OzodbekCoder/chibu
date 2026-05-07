@@ -1236,7 +1236,12 @@ class MyWebhookHandler extends WebhookHandler
 
         try {
             $res = Http::withHeaders($headers)->timeout(15)->get($endpoint);
-            if (!$res->successful()) return [];
+            if (!$res->successful()) {
+                $body = mb_strimwidth($res->body(), 0, 300, '...');
+                $this->chat->html("⚠️ <b>IPOST API xatosi</b>\nStatus: <b>{$res->status()}</b>\n<code>{$body}</code>")->send();
+                Log::warning('IPOST fetch failed', ['status' => $res->status(), 'body' => $res->body()]);
+                return [];
+            }
 
             $data   = $res->json();
             $items  = \is_array($data) && \array_is_list($data) ? $data : (isset($data['trackingNumber']) ? [$data] : []);
@@ -1247,7 +1252,10 @@ class MyWebhookHandler extends WebhookHandler
                 }
             }
             return $result;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $msg = mb_strimwidth($e->getMessage(), 0, 300, '...');
+            $this->chat->html("⚠️ <b>IPOST ulanish xatosi</b>\n<code>{$msg}</code>")->send();
+            Log::error('IPOST fetch exception', ['error' => $e->getMessage()]);
             return [];
         }
     }
