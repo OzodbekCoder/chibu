@@ -4,9 +4,23 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "mobile:sync": "cap sync android",
+        "mobile:open": "cap open android",
+        "mobile:run": "cap run android",
+        "mobile:build": "cd android && gradlew.bat assembleDebug",
+        "mobile:apk": "cd android && gradlew.bat assembleRelease"
+    },
+    "dependencies": {
+        "@capacitor/android": "^6.1.2",
+        "@capacitor/app": "^6.0.1",
+        "@capacitor/core": "^6.1.2",
+        "@capacitor/network": "^6.0.3",
+        "@capacitor/splash-screen": "^6.0.2",
+        "@capacitor/status-bar": "^6.0.2"
     },
     "devDependencies": {
+        "@capacitor/cli": "^6.1.2",
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",

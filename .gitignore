@@ -22,3 +22,11 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Capacitor / NativePHP Mobile build artifacts
+/android
+/ios
+/release.keystore
+*.keystore
+mobile-shell/build/
+
