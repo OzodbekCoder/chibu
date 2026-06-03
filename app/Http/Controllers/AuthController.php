@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TelegraphChat;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +25,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = TelegraphChat::where('email', $credentials['email'])->first();
+        $user = User::where('email', $credentials['email'])->first();
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
