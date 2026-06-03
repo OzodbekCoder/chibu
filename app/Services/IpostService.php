@@ -9,14 +9,18 @@ use Illuminate\Support\Facades\Log;
 class IpostService
 {
     public const STATUS_LABELS = [
-        'Warehouse' => '🏭 Xitoy ombori',
-        'Ulugchat'  => '🛂 Xitoy chegara punkti',
-        'Osh'       => "🏔 O'zbekiston chegara punkti",
-        'DropZone'  => '📍 Qabul qilish punkti',
-        'Delivered' => '✅ Qabul qilindi',
-        'CREATED'   => '🆕 Yangi yaratildi',
-        'Yiwu'      => "🚀 Xitoydan yo'lga chiqdi",
+        'Warehouse'          => '🏭 Xitoy ombori',
+        'Ulugchat'           => '🛂 Xitoy chegara punkti',
+        'Osh'                => "🏔 O'zbekiston chegara punkti",
+        'DistributionCenter' => '🏢 Hududiy omborda',
+        'DropZone'           => '📍 Qabul qilish punkti',
+        'Delivered'          => '✅ Qabul qilindi',
+        'CREATED'            => '🆕 Yangi yaratildi',
+        'Yiwu'               => "🚀 Xitoydan yo'lga chiqdi",
     ];
+
+    // IPOST statuses where user can accept/archive the shipment
+    public const ACCEPT_STATUSES = ['DistributionCenter', 'DropZone', 'Delivered'];
 
     public const PAY_LABELS = [
         'PAID'      => "✅ To'landi",

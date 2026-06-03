@@ -45,6 +45,23 @@ class ReportsPage extends Component
         return response()->download($info['path'], $info['filename'])->deleteFileAfterSend(true);
     }
 
+    public function downloadArchive(ReportService $service)
+    {
+        $this->validate([
+            'from' => ['required', 'date'],
+            'to'   => ['required', 'date', 'after_or_equal:from'],
+        ], ['to.after_or_equal' => 'Tugash sanasi boshlanishdan keyin bo\'lishi kerak']);
+
+        $userId = auth()->id();
+        $info   = $service->generateArchive(
+            $userId,
+            Carbon::parse($this->from),
+            Carbon::parse($this->to),
+            (string) $userId
+        );
+        return response()->download($info['path'], $info['filename'])->deleteFileAfterSend(true);
+    }
+
     public function render()
     {
         return view('livewire.reports.page');

@@ -73,11 +73,13 @@
                     };
                     $ii        = $ipostMap[mb_strtoupper($s->track_code)] ?? null;
                     $iPaySom   = (int) ($ii['payAmountSom'] ?? 0);
+                    $iWeight   = $ii['weight'] ?? null;
                     $goodsUzs  = ($yuanRate > 0 && $s->price_yuan) ? (float) $s->price_yuan * $yuanRate : 0;
                     $totalUzs  = $goodsUzs + $iPaySom;
                     $perPiece  = ($s->pieces && $totalUzs > 0) ? (int) ($totalUzs / $s->pieces) : null;
                     $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
                     $isActive  = !in_array($s->status, ['DELIVERED','CANCELLED']);
+                    $canAccept = $isActive && $ii && in_array($ii['status'] ?? '', \App\Services\IpostService::ACCEPT_STATUSES);
                 @endphp
                 <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                     {{-- IPOST rasm --}}
@@ -134,6 +136,9 @@
                                 @if ($iPaySom > 0)
                                     <div class="text-indigo-700 mt-0.5">🚚 {{ number_format($iPaySom) }} so'm</div>
                                 @endif
+                                @if ($iWeight)
+                                    <div class="text-indigo-600 mt-0.5">⚖️ IPOST vazni: {{ $iWeight }} kg</div>
+                                @endif
                             </div>
                         @endif
 
@@ -141,8 +146,8 @@
                             <div class="text-xs text-slate-600 italic">📝 {{ $s->note }}</div>
                         @endif
 
-                        {{-- Qabul qilish tugmasi --}}
-                        @if ($isActive)
+                        {{-- Qabul qilish tugmasi: faqat DistributionCenter/DropZone/Delivered statusida --}}
+                        @if ($canAccept)
                             <button wire:click="accept({{ $s->id }})"
                                 wire:confirm="Bu yukni qabul qildingizmi?"
                                 wire:loading.attr="disabled"

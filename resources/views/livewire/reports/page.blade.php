@@ -19,11 +19,19 @@
         @error('from') <div class="text-rose-600 text-xs">{{ $message }}</div> @enderror
         @error('to')   <div class="text-rose-600 text-xs">{{ $message }}</div> @enderror
 
-        <button wire:click="downloadRange" wire:loading.attr="disabled" wire:target="downloadRange"
-            class="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium text-sm">
-            <span wire:loading.remove wire:target="downloadRange">⬇️ Sana oralig'i bo'yicha yuklab olish</span>
-            <span wire:loading wire:target="downloadRange">⏳ Tayyorlanmoqda...</span>
-        </button>
+        <div class="grid grid-cols-2 gap-2">
+            <button wire:click="downloadRange" wire:loading.attr="disabled" wire:target="downloadRange"
+                class="py-3 rounded-xl bg-indigo-600 text-white font-medium text-sm">
+                <span wire:loading.remove wire:target="downloadRange">⬇️ Hisobot</span>
+                <span wire:loading wire:target="downloadRange">⏳...</span>
+            </button>
+            <button wire:click="downloadArchive" wire:loading.attr="disabled" wire:target="downloadArchive"
+                class="py-3 rounded-xl bg-emerald-600 text-white font-medium text-sm">
+                <span wire:loading.remove wire:target="downloadArchive">✅ Arxiv hisobot</span>
+                <span wire:loading wire:target="downloadArchive">⏳...</span>
+            </button>
+        </div>
+        <div class="text-[11px] text-slate-400">Arxiv hisobot — qabul qilingan sanaga ko'ra</div>
     </div>
 
     <!-- Quick presets -->
