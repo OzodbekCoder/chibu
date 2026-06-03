@@ -38,56 +38,30 @@
                 class="w-full rounded-xl border-slate-300 px-3 py-3 border focus:border-indigo-500">
 
         @elseif ($step === 4)
-            <h2 class="font-semibold mb-3">👤 Mijoz</h2>
-            @error('client_id') <div class="text-rose-600 text-sm mb-2">{{ $message }}</div> @enderror
-
-            @if ($newClientMode)
-                <div class="space-y-2">
-                    <input wire:model="newClientName" type="text" placeholder="Mijoz ismi" autofocus
-                        class="w-full rounded-xl border-slate-300 px-3 py-3 border focus:border-indigo-500">
-                    @error('newClientName') <div class="text-rose-600 text-sm">{{ $message }}</div> @enderror
-                    <input wire:model="newClientPhone" type="tel" inputmode="tel" placeholder="+998... (ixtiyoriy)"
-                        class="w-full rounded-xl border-slate-300 px-3 py-3 border focus:border-indigo-500">
-                    <button wire:click="$set('newClientMode', false)" type="button"
-                        class="text-sm text-slate-500">← Mavjud mijozlardan tanlash</button>
-                </div>
-            @else
-                <button wire:click="$set('newClientMode', true)" type="button"
-                    class="w-full mb-3 py-2.5 rounded-xl border-2 border-dashed border-indigo-300 text-indigo-600 text-sm font-medium">
-                    ➕ Yangi mijoz qo'shish
-                </button>
-                <div class="max-h-72 overflow-y-auto space-y-1.5">
-                    @forelse ($clients as $c)
-                        <button type="button" wire:click="pickClient({{ $c->id }})"
-                            class="w-full text-left p-3 rounded-xl border {{ $client_id === $c->id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white' }}">
-                            <div class="font-medium text-sm">{{ $c->name }}</div>
-                            @if ($c->phone) <div class="text-xs text-slate-500">{{ $c->phone }}</div> @endif
-                        </button>
-                    @empty
-                        <div class="text-center text-sm text-slate-400 py-6">Hali mijoz yo'q.</div>
-                    @endforelse
-                </div>
-            @endif
-
-        @elseif ($step === 5)
             <h2 class="font-semibold mb-3">📝 Izoh va tasdiqlash</h2>
-            <textarea wire:model="note" rows="2" placeholder="Qizil rangli, katta o'lcham (ixtiyoriy)"
+            <textarea wire:model="note" rows="2" placeholder="Qo'shimcha izoh (ixtiyoriy)"
                 class="w-full rounded-xl border-slate-300 px-3 py-3 border focus:border-indigo-500 mb-4"></textarea>
 
             <div class="bg-slate-50 rounded-xl p-3 text-sm space-y-1.5">
-                <div class="flex justify-between"><span class="text-slate-500">Trek:</span> <span class="font-mono font-semibold">{{ $track_code }}</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">Tarif:</span> <span class="font-medium">{{ $tariff_type }} · {{ $amount }}</span></div>
-                @if ($price_yuan)
-                    <div class="flex justify-between"><span class="text-slate-500">Narx:</span> <span class="font-medium">¥ {{ $price_yuan }}</span></div>
-                @endif
-                <div class="flex justify-between"><span class="text-slate-500">Mijoz:</span>
-                    <span class="font-medium">
-                        @php $picked = $clients->firstWhere('id', $client_id); @endphp
-                        {{ $picked?->name ?? ($newClientName ?: '—') }}
-                    </span>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Trek:</span>
+                    <span class="font-mono font-semibold">{{ $track_code }}</span>
                 </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Tarif:</span>
+                    <span class="font-medium">{{ $tariff_type }} · {{ $amount }}</span>
+                </div>
+                @if ($price_yuan)
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Narx:</span>
+                        <span class="font-medium">¥ {{ $price_yuan }}</span>
+                    </div>
+                @endif
                 @if ($note)
-                    <div class="flex justify-between"><span class="text-slate-500">Izoh:</span> <span class="font-medium">{{ $note }}</span></div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Izoh:</span>
+                        <span class="font-medium">{{ $note }}</span>
+                    </div>
                 @endif
             </div>
         @endif
