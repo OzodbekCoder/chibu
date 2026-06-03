@@ -33,12 +33,6 @@ class AuthController extends Controller
             ]);
         }
 
-        if (!$user->is_admin) {
-            throw ValidationException::withMessages([
-                'email' => __('Hisobingiz hali admin emas. Adminga murojaat qiling.'),
-            ]);
-        }
-
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
         return redirect()->intended(route('app.dashboard'));

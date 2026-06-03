@@ -41,7 +41,7 @@ class ReportService
             ->get();
 
         $ipostMap = (new IpostService())->fetchAllByTrack($chatIdHeader);
-        $yuanRate = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
+        $yuanRate = (float) (CurrencyRate::latestYuan($userId)?->rate ?? 0);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();

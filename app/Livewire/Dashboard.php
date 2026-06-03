@@ -84,7 +84,7 @@ class Dashboard extends Component
             ->limit(5)
             ->get();
 
-        $rate = CurrencyRate::latestYuan();
+        $rate = CurrencyRate::latestYuan($userId);
 
         return view('livewire.dashboard', [
             'totalShipments' => $totalShipments,

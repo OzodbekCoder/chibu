@@ -9,42 +9,32 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
 #[Title('Yangi yuk · CHIBU')]
 class ShipmentCreate extends Component
 {
-    public int $step = 1;
-    public int $totalSteps = 6;
+    public int $step      = 1;
+    public int $totalSteps = 5;
 
     // Step 1
-    #[Validate('required|string|min:3|max:120')]
     public string $track_code = '';
 
     // Step 2
-    #[Validate('required|in:kg,piece,m3')]
     public string $tariff_type = 'kg';
+    public string $amount      = '';
 
-    #[Validate('required|numeric|gt:0')]
-    public string $amount = '';
-
-    // Step 3
-    #[Validate('required|in:avia,avto,sea,other')]
-    public string $delivery_type = 'avia';
-
-    // Step 4
+    // Step 3 — narx
     public ?string $price_yuan = null;
-    public ?string $vendor_or_link = null;
 
-    // Step 5
-    public ?int $client_id = null;
-    public bool $newClientMode = false;
-    public string $newClientName = '';
+    // Step 4 — mijoz
+    public ?int  $client_id    = null;
+    public bool  $newClientMode = false;
+    public string $newClientName  = '';
     public string $newClientPhone = '';
 
-    // Step 6
+    // Step 5 — izoh
     public ?string $note = null;
 
     public function nextStep(): void
@@ -53,8 +43,7 @@ class ShipmentCreate extends Component
             1 => $this->validateStep1(),
             2 => $this->validateStep2(),
             3 => null,
-            4 => null,
-            5 => $this->validateStep5(),
+            4 => $this->validateStep4(),
             default => null,
         };
 
@@ -86,7 +75,7 @@ class ShipmentCreate extends Component
         ], [], ['amount' => 'Miqdor']);
     }
 
-    protected function validateStep5(): void
+    protected function validateStep4(): void
     {
         if ($this->newClientMode) {
             $this->validate([
@@ -104,7 +93,7 @@ class ShipmentCreate extends Component
         }
 
         if (!$this->client_id) {
-            $this->step = 5;
+            $this->step = 4;
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'client_id' => 'Mijoz tanlanmadi.',
             ]);
@@ -113,27 +102,23 @@ class ShipmentCreate extends Component
 
     public function pickClient(int $id): void
     {
-        $this->client_id = $id;
+        $this->client_id     = $id;
         $this->newClientMode = false;
     }
 
     public function save(IpostService $ipost)
     {
-        // Re-validate everything before persisting
         $this->validateStep1();
         $this->validateStep2();
-        $this->validate([
-            'delivery_type' => ['required', 'in:avia,avto,sea,other'],
-        ]);
-        $this->validateStep5();
+        $this->validateStep4();
 
         $userId = auth()->id();
-        $chatId = auth()->user()->chat_id ?? '';
+        $amount = (float) str_replace([',', ' '], ['.', ''], $this->amount);
 
         $data = [
             'track_code'    => $this->track_code,
             'tariff_type'   => $this->tariff_type,
-            'delivery_type' => $this->delivery_type,
+            'delivery_type' => 'avto',
             'client_id'     => $this->client_id,
             'note'          => $this->note ? trim($this->note) : null,
             'price_yuan'    => $this->price_yuan ? (float) str_replace([',', ' '], ['.', ''], $this->price_yuan) : null,
@@ -142,28 +127,15 @@ class ShipmentCreate extends Component
             'created_by_id' => $userId,
         ];
 
-        // tariff fields
-        $amount = (float) str_replace([',', ' '], ['.', ''], $this->amount);
         if ($this->tariff_type === 'kg')        $data['weight_kg'] = $amount;
         elseif ($this->tariff_type === 'm3')    $data['volume_m3'] = $amount;
         else                                    $data['pieces']    = (int) round($amount);
 
-        // vendor_or_link
-        if ($this->vendor_or_link) {
-            $vol = trim($this->vendor_or_link);
-            if (filter_var($vol, FILTER_VALIDATE_URL)) {
-                $data['order_url'] = $vol;
-            } else {
-                $data['vendor_name'] = $vol;
-            }
-        }
-
         $shipment = Shipment::create($data);
 
-        // Auto-register IPOST if client notes contain IPOST flag
         $shipment->load('client');
         if (Str::contains($shipment->client?->notes ?? '', 'IPOST')) {
-            $ipost->register($shipment, $chatId);
+            $ipost->register($shipment, (string) $userId);
         }
 
         session()->flash('ok', "✅ #{$shipment->id} · {$shipment->track_code} saqlandi");
@@ -177,8 +149,6 @@ class ShipmentCreate extends Component
             ->limit(50)
             ->get(['id', 'name', 'phone']);
 
-        return view('livewire.shipments.create', [
-            'clients' => $clients,
-        ]);
+        return view('livewire.shipments.create', ['clients' => $clients]);
     }
 }

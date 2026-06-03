@@ -5,6 +5,7 @@ namespace App\Livewire\Shipments;
 use App\Models\CurrencyRate;
 use App\Models\Shipment;
 use App\Services\IpostService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -24,9 +25,12 @@ class ShipmentList extends Component
     #[Url(as: 'status')]
     public string $statusFilter = '';
 
+    #[Url(as: 'archive')]
+    public bool $showArchive = false;
+
     public function updating($name): void
     {
-        if (in_array($name, ['search', 'statusFilter'])) {
+        if (in_array($name, ['search', 'statusFilter', 'showArchive'])) {
             $this->resetPage();
         }
     }
@@ -34,16 +38,38 @@ class ShipmentList extends Component
     public function clearFilters(): void
     {
         $this->reset(['search', 'statusFilter']);
+        $this->showArchive = false;
         $this->resetPage();
+    }
+
+    public function accept(int $id): void
+    {
+        Shipment::where('id', $id)
+            ->where('created_by_id', auth()->id())
+            ->whereNotIn('status', ['DELIVERED', 'CANCELLED'])
+            ->update([
+                'status'     => 'DELIVERED',
+                'arrived_at' => Carbon::now(),
+                'status_at'  => Carbon::now(),
+            ]);
     }
 
     public function render(IpostService $ipost)
     {
         $userId = auth()->id();
-        $chatId = auth()->user()->chat_id ?? '';
+        $chatId = (string) $userId;
 
         $query = Shipment::with('client')
             ->where('created_by_id', $userId);
+
+        if ($this->showArchive) {
+            $query->where('status', 'DELIVERED');
+        } else {
+            $query->whereNotIn('status', ['DELIVERED', 'CANCELLED']);
+            if ($this->statusFilter !== '') {
+                $query->where('status', $this->statusFilter);
+            }
+        }
 
         if ($this->search !== '') {
             $term = trim($this->search);
@@ -53,14 +79,9 @@ class ShipmentList extends Component
             });
         }
 
-        if ($this->statusFilter !== '') {
-            $query->where('status', $this->statusFilter);
-        }
-
         $shipments = $query->latest()->paginate(10);
-
-        $ipostMap = Cache::remember("ipost_map_{$userId}", 300, fn () => $ipost->fetchAllByTrack($chatId));
-        $yuanRate = (float) (CurrencyRate::latestYuan()?->rate ?? 0);
+        $ipostMap  = Cache::remember("ipost_map_{$userId}", 300, fn () => $ipost->fetchAllByTrack($chatId));
+        $yuanRate  = (float) (CurrencyRate::latestYuan($userId)?->rate ?? 0);
 
         return view('livewire.shipments.list', [
             'shipments' => $shipments,
