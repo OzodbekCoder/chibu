@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\TelegraphBot;
 use App\Models\TelegraphChat;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Hash;
 
 class CreateAdminUser extends Command
 {
@@ -54,7 +53,7 @@ class CreateAdminUser extends Command
 
         $chat->email    = $email;
         $chat->name     = $name ?: $chat->name;
-        $chat->password = Hash::make($password);
+        $chat->password = $password;
         $chat->is_admin = true;
         $chat->save();
 
