@@ -25,7 +25,6 @@ class ShipmentSearch extends Component
     public function render(IpostService $ipost)
     {
         $userId = auth()->id();
-        $chatId = auth()->user()->chat_id ?? '';
 
         $results = collect();
         if (mb_strlen(trim($this->query)) >= 2) {
@@ -34,8 +33,7 @@ class ShipmentSearch extends Component
                 ->where('created_by_id', $userId)
                 ->where(function ($q) use ($term) {
                     $q->where('track_code', 'like', "%{$term}%")
-                      ->orWhere('vendor_name', 'like', "%{$term}%")
-                      ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%"));
+                      ->orWhere('note', 'like', "%{$term}%");
                 })
                 ->latest()
                 ->limit(20)

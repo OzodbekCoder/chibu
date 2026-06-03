@@ -47,11 +47,12 @@ class ReportService
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = [
-            'ID', 'Trek Raqam', 'Mijoz', 'Izoh', 'Tovar soni',
+            'ID', 'Trek Raqam', 'Mijoz', 'Izoh',
+            'Miqdor (raqam)', 'Birlik',
             'Tovar narxi (¥)', 'Status', 'Buyurtma sanasi',
             "IPOST dan mi (ha/yo'q)", "IPOST Status",
             "Yo'l haqqi (so'm)", "Bir tovarning tannarxi (so'm)",
-            'Link', 'Pochta turi',
+            'Link',
         ];
         foreach ($headers as $col => $h) {
             $sheet->setCellValue([$col + 1, 1], $h);
@@ -64,7 +65,6 @@ class ReportService
             'ON_THE_WAY' => "Yo'lda",'CUSTOMS' => 'Bojxona',
             'DELIVERED' => 'Yetkazildi','CANCELLED' => 'Bekor',
         ];
-        $deliveryLabel = ['avia' => 'Avia','avto' => 'Avto','sea' => 'Daryo','other' => 'Boshqa'];
         $ipostStatusLabels = [
             'Ulugchat' => 'Xitoy chegara','Osh' => 'UZ chegara','DropZone' => 'Qabul punkti',
             'Delivered' => 'Qabul qilindi','CREATED' => 'Yangi','Yiwu' => 'Xitoydan chiqdi',
@@ -79,11 +79,11 @@ class ReportService
             $totalUzs    = $goodsUzs + $deliveryUzs;
             $perPiece    = ($pieces > 0 && $totalUzs > 0) ? (int) ($totalUzs / $pieces) : null;
 
-            $tovarSoni = match ($s->tariff_type) {
-                'kg'    => ($s->weight_kg ?? 0) . ' kg',
-                'm3'    => ($s->volume_m3 ?? 0) . ' m³',
-                'piece' => $pieces,
-                default => '-',
+            [$miqdorNum, $birlik] = match ($s->tariff_type) {
+                'kg'    => [(float) ($s->weight_kg ?? 0), 'kg'],
+                'm3'    => [(float) ($s->volume_m3 ?? 0), 'm³'],
+                'piece' => [$pieces, 'dona'],
+                default => [0, '-'],
             };
 
             $rawIpostStatus  = $ipost['status'] ?? '';
@@ -93,16 +93,16 @@ class ReportService
             $sheet->setCellValueExplicit([2, $row], $s->track_code, DataType::TYPE_STRING);
             $sheet->setCellValue([3,  $row], $s->client?->name ?? '');
             $sheet->setCellValue([4,  $row], $s->note ?? '');
-            $sheet->setCellValue([5,  $row], $tovarSoni);
-            $sheet->setCellValue([6,  $row], $s->price_yuan ? (float) $s->price_yuan : '');
-            $sheet->setCellValue([7,  $row], $statusLabel[$s->status] ?? $s->status);
-            $sheet->setCellValue([8,  $row], $s->created_at->format('d.m.Y H:i'));
-            $sheet->setCellValue([9,  $row], $s->ipost_id ? 'Ha' : "Yo'q");
-            $sheet->setCellValue([10, $row], $ipostStatusText);
-            $sheet->setCellValue([11, $row], $deliveryUzs > 0 ? (int) $deliveryUzs : '');
-            $sheet->setCellValue([12, $row], $perPiece);
-            $sheet->setCellValue([13, $row], $s->order_url ?? '');
-            $sheet->setCellValue([14, $row], $deliveryLabel[$s->delivery_type] ?? $s->delivery_type);
+            $sheet->setCellValue([5,  $row], $miqdorNum);
+            $sheet->setCellValue([6,  $row], $birlik);
+            $sheet->setCellValue([7,  $row], $s->price_yuan ? (float) $s->price_yuan : '');
+            $sheet->setCellValue([8,  $row], $statusLabel[$s->status] ?? $s->status);
+            $sheet->setCellValue([9,  $row], $s->created_at->format('d.m.Y H:i'));
+            $sheet->setCellValue([10, $row], $s->ipost_id ? 'Ha' : "Yo'q");
+            $sheet->setCellValue([11, $row], $ipostStatusText);
+            $sheet->setCellValue([12, $row], $deliveryUzs > 0 ? (int) $deliveryUzs : '');
+            $sheet->setCellValue([13, $row], $perPiece);
+            $sheet->setCellValue([14, $row], $s->order_url ?? '');
 
             $row++;
         }
@@ -110,8 +110,8 @@ class ReportService
         $lastDataRow = $row - 1;
         $sheet->setCellValue([1,  $row], 'Jami:');
         $sheet->setCellValue([5,  $row], "=SUM(E2:E{$lastDataRow})");
-        $sheet->setCellValue([6,  $row], "=SUM(F2:F{$lastDataRow})");
-        $sheet->setCellValue([11, $row], "=SUM(K2:K{$lastDataRow})");
+        $sheet->setCellValue([7,  $row], "=SUM(G2:G{$lastDataRow})");
+        $sheet->setCellValue([12, $row], "=SUM(L2:L{$lastDataRow})");
         $sheet->getStyle('A' . $row . ':N' . $row)->getFont()->setBold(true);
 
         foreach (range(1, 14) as $col) {

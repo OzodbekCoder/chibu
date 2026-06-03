@@ -2,7 +2,7 @@
     <div class="bg-white rounded-2xl border border-slate-200 p-3">
         <div class="relative">
             <input wire:model.live.debounce.400ms="query" type="search" autofocus
-                placeholder="Trek kod, mijoz nomi yoki telefon..."
+                placeholder="Trek kod yoki izoh bo'yicha qidiring..."
                 class="w-full rounded-xl border border-slate-300 pl-10 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500">
             <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
             @if ($query)
@@ -20,7 +20,7 @@
         <div class="bg-white rounded-2xl p-8 text-center border border-slate-200">
             <div class="text-4xl mb-2">🔎</div>
             <div class="font-medium">Qidirishni boshlang</div>
-            <div class="text-sm text-slate-500 mt-1">Trek, mijoz nomi yoki telefon bo'yicha qidiring.</div>
+            <div class="text-sm text-slate-500 mt-1">Trek raqam yoki izoh bo'yicha qidiring.</div>
         </div>
     @elseif ($results->isEmpty())
         <div wire:loading.remove wire:target="query"

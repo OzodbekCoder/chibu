@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Models\Client;
 use App\Models\CurrencyRate;
 use App\Models\Shipment;
 use Carbon\Carbon;
@@ -15,7 +14,6 @@ use Livewire\Component;
 #[Title('Bosh sahifa · CHIBU')]
 class Dashboard extends Component
 {
-    /** Preset: today | week | month | year | custom */
     #[Url(as: 'r')]
     public string $range = 'month';
 
@@ -39,7 +37,7 @@ class Dashboard extends Component
             'week'  => $this->setDates(Carbon::now()->startOfWeek(), Carbon::today()),
             'month' => $this->setDates(Carbon::now()->startOfMonth(), Carbon::today()),
             'year'  => $this->setDates(Carbon::now()->startOfYear(), Carbon::today()),
-            default => null, // custom — preserve current from/to
+            default => null,
         };
     }
 
@@ -49,9 +47,7 @@ class Dashboard extends Component
         $this->validate([
             'from' => ['required', 'date'],
             'to'   => ['required', 'date', 'after_or_equal:from'],
-        ], [
-            'to.after_or_equal' => 'Tugash sanasi boshlanishdan keyin bo\'lishi kerak',
-        ]);
+        ], ['to.after_or_equal' => 'Tugash sanasi boshlanishdan keyin bo\'lishi kerak']);
     }
 
     private function setDates(Carbon $from, Carbon $to): void
@@ -66,20 +62,27 @@ class Dashboard extends Component
         $from   = Carbon::parse($this->from)->startOfDay();
         $to     = Carbon::parse($this->to)->endOfDay();
 
-        $totalShipments = Shipment::where('created_by_id', $userId)->count();
-        $clientCount    = Client::where('created_by_id', $userId)->count();
+        $activeStatuses = ['CREATED', 'CHINA_WAREHOUSE', 'ON_THE_WAY', 'CUSTOMS'];
 
-        // In-range stats
-        $inRange = Shipment::where('created_by_id', $userId)
-            ->whereBetween('created_at', [$from, $to]);
+        $activeCount    = Shipment::where('created_by_id', $userId)->whereIn('status', $activeStatuses)->count();
+        $deliveredToday = Shipment::where('created_by_id', $userId)
+            ->where('status', 'DELIVERED')
+            ->whereDate('arrived_at', Carbon::today())
+            ->count();
 
-        $rangeCount  = (clone $inRange)->count();
-        $rangePieces = (clone $inRange)->sum('pieces') ?? 0;
-        $rangeYuan   = (clone $inRange)->sum('price_yuan') ?? 0;
+        $inRange   = Shipment::where('created_by_id', $userId)->whereBetween('created_at', [$from, $to]);
+        $rangeCount = (clone $inRange)->count();
+        $rangeYuan  = (clone $inRange)->sum('price_yuan') ?? 0;
+
+        $statusBreakdown = Shipment::where('created_by_id', $userId)
+            ->whereIn('status', $activeStatuses)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status');
 
         $latest = Shipment::with('client')
             ->where('created_by_id', $userId)
-            ->whereBetween('created_at', [$from, $to])
+            ->whereIn('status', $activeStatuses)
             ->latest()
             ->limit(5)
             ->get();
@@ -87,13 +90,13 @@ class Dashboard extends Component
         $rate = CurrencyRate::latestYuan($userId);
 
         return view('livewire.dashboard', [
-            'totalShipments' => $totalShipments,
-            'clientCount'    => $clientCount,
-            'rangeCount'     => $rangeCount,
-            'rangePieces'    => $rangePieces,
-            'rangeYuan'      => $rangeYuan,
-            'latest'         => $latest,
-            'yuanRate'       => $rate,
+            'activeCount'     => $activeCount,
+            'deliveredToday'  => $deliveredToday,
+            'rangeCount'      => $rangeCount,
+            'rangeYuan'       => $rangeYuan,
+            'statusBreakdown' => $statusBreakdown,
+            'latest'          => $latest,
+            'yuanRate'        => $rate,
         ]);
     }
 }

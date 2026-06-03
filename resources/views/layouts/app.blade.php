@@ -16,6 +16,14 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased">
+    <!-- Offline overlay (hidden by default, shown on JS offline event for non-dashboard pages) -->
+    <div id="offline-overlay" style="display:none"
+         class="fixed inset-0 bg-slate-900/90 z-[999] flex-col items-center justify-center gap-4 text-center px-8">
+        <div class="text-6xl">📡</div>
+        <div class="text-white text-2xl font-bold">Siz oflayn</div>
+        <div class="text-slate-300 text-sm">Internet aloqasini tekshiring</div>
+    </div>
+
     <div class="min-h-screen flex flex-col">
         @auth
             @include('partials.topbar')
@@ -32,5 +40,21 @@
     </div>
 
     @livewireScripts
+    <script>
+        (function () {
+            const overlay = document.getElementById('offline-overlay');
+            const isDashboard = () => {
+                const p = window.location.pathname.replace(/\/$/, '');
+                return p === '/app' || p === '';
+            };
+            function updateStatus() {
+                if (overlay) overlay.style.display = (!navigator.onLine && !isDashboard()) ? 'flex' : 'none';
+            }
+            window.addEventListener('online',  updateStatus);
+            window.addEventListener('offline', updateStatus);
+            document.addEventListener('livewire:navigated', updateStatus);
+            updateStatus();
+        })();
+    </script>
 </body>
 </html>
