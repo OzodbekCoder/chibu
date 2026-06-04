@@ -96,10 +96,14 @@ class IpostService
 
     private function headers(string $chatIdHeader): array
     {
+        // Single IPOST account: prefer fixed IPOST_CHAT_ID from env.
+        // Web users have synthetic chat_id (web-xxxx) that IPOST rejects with 401.
+        $chatId = env('IPOST_CHAT_ID') ?: $chatIdHeader;
+
         return [
             'x-apikey'    => env('IPOST_API_KEY', ''),
             'x-timestamp' => 1777288697,
-            'x-chat-id'   => (string) $chatIdHeader,
+            'x-chat-id'   => (string) $chatId,
             'source'      => 'TELEGRAM',
         ];
     }
