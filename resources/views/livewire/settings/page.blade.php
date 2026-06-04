@@ -1,7 +1,10 @@
-@once
+@pushOnce('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js" defer></script>
-@endonce
+@endPushOnce
+
+@pushOnce('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+@endPushOnce
 
 <div class="px-4 py-4 space-y-3">
     @if (session('ok'))
@@ -9,7 +12,7 @@
     @endif
 
     {{-- Profil --}}
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4"
+    <div class="bg-white rounded-2xl border border-slate-200 p-4"
          x-data="{
              showModal: false,
              cropper:   null,
@@ -18,24 +21,24 @@
              onFile(ev) {
                  const f = ev.target.files[0];
                  if (!f) return;
-                 const r = new FileReader();
-                 r.onload = e => {
+                 const reader = new FileReader();
+                 reader.onload = e => {
                      this.showModal = true;
                      this.$nextTick(() => {
-                         this.$refs.cropImg.src = e.target.result;
-                         if (this.cropper) this.cropper.destroy();
+                         if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
                          this.cropper = new Cropper(this.$refs.cropImg, {
                              aspectRatio: 1,
                              viewMode: 2,
                              dragMode: 'move',
-                             autoCropArea: 1,
+                             autoCropArea: 0.9,
                              cropBoxResizable: false,
-                             minContainerHeight: 260,
                              responsive: true,
+                             minContainerHeight: 260,
                          });
+                         this.cropper.replace(e.target.result);
                      });
                  };
-                 r.readAsDataURL(f);
+                 reader.readAsDataURL(f);
              },
              confirm() {
                  if (!this.cropper || this.busy) return;
@@ -44,44 +47,47 @@
                      .toBlob(blob => {
                          const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
                          $wire.upload('avatar', file,
-                             () => { this.showModal = false; this.busy = false; $wire.saveProfile(); },
-                             () => { this.busy = false; alert('Yuklashda xato'); }
+                             () => { this.close(); $wire.saveProfile(); },
+                             () => { this.busy = false; }
                          );
                      }, 'image/jpeg', 0.9);
              },
-             cancel() {
+             close() {
                  this.showModal = false;
+                 this.busy = false;
                  if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
                  this.$refs.fileInput.value = '';
              }
          }">
 
-        <h2 class="font-semibold">👤 Profil</h2>
+        <h2 class="font-semibold mb-4">👤 Profil</h2>
 
-        {{-- Avatar circle + pick button --}}
-        <div class="flex items-center gap-4">
-            <div class="shrink-0 cursor-pointer" @click="openPicker">
+        {{-- Avatar: centered circle, click to change --}}
+        <div class="flex flex-col items-center gap-3 mb-4">
+            <button type="button" @click="openPicker"
+                class="relative w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-200 focus:outline-none">
                 @if ($avatarUrl)
                     <img src="{{ $avatarUrl }}" alt="avatar"
-                         class="w-20 h-20 rounded-full object-cover border-2 border-indigo-200 ring-2 ring-indigo-100">
+                         class="w-full h-full object-cover" style="display:block; width:96px; height:96px;">
                 @else
-                    <div class="w-20 h-20 rounded-full bg-indigo-100 border-2 border-indigo-200 flex items-center justify-center text-3xl font-bold text-indigo-600">
+                    <div class="w-full h-full bg-indigo-100 flex items-center justify-center text-4xl font-bold text-indigo-600">
                         {{ mb_strtoupper(mb_substr(auth()->user()->name ?? 'U', 0, 1)) }}
                     </div>
                 @endif
-                <div class="text-[10px] text-indigo-600 text-center mt-1">✏️ O'zgartirish</div>
-            </div>
-
-            <input type="file" x-ref="fileInput" @change="onFile" accept="image/*" class="sr-only">
-
-            <div class="flex-1">
-                <label class="block">
-                    <span class="text-sm text-slate-600">Ismi</span>
-                    <input wire:model="profileName" type="text"
-                        class="mt-1 w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
-                </label>
-            </div>
+                <div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 active:opacity-100 transition-opacity">
+                    <span class="text-white text-xs font-medium">✏️</span>
+                </div>
+            </button>
+            <p class="text-xs text-slate-400">Rasmga bosib o'zgartiring</p>
         </div>
+
+        <input type="file" x-ref="fileInput" @change="onFile" accept="image/*" class="sr-only">
+
+        <label class="block mb-3">
+            <span class="text-sm text-slate-600">Ismi</span>
+            <input wire:model="profileName" type="text"
+                class="mt-1 w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
+        </label>
 
         <button wire:click="saveProfile" wire:loading.attr="disabled"
             class="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium">
@@ -89,28 +95,29 @@
             <span wire:loading wire:target="saveProfile">⏳...</span>
         </button>
 
-        {{-- Crop modal --}}
-        <div x-show="showModal" x-cloak
-             class="fixed inset-0 z-50 bg-black/85 flex flex-col items-center justify-center p-4"
-             style="display:none">
-            <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 font-semibold text-sm">✂️ Rasmni kesib oling</div>
+        {{-- Crop modal (portal: fixed, above everything) --}}
+        <div x-cloak x-show="showModal"
+             class="fixed inset-0 z-[100] bg-black/90 flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 bg-black/60">
+                <span class="text-white text-sm font-medium">✂️ Rasmni kesib oling</span>
+                <button @click="close" class="text-white/70 text-2xl leading-none">×</button>
+            </div>
 
-                <div class="relative" style="height: 280px; background:#000;">
-                    <img x-ref="cropImg" src="" alt="" style="max-width:100%; display:block;">
-                </div>
+            <div class="flex-1 relative overflow-hidden">
+                <img x-ref="cropImg" src="" alt=""
+                     style="display:block; max-width:100%; max-height:100%;">
+            </div>
 
-                <div class="p-3 flex gap-2">
-                    <button @click="cancel"
-                        class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">
-                        ✕ Bekor
-                    </button>
-                    <button @click="confirm" :disabled="busy"
-                        class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium disabled:opacity-60">
-                        <span x-show="!busy">✅ Tasdiqlash</span>
-                        <span x-show="busy">⏳ Yuklanmoqda...</span>
-                    </button>
-                </div>
+            <div class="px-4 py-4 bg-black/60 flex gap-3">
+                <button @click="close" :disabled="busy"
+                    class="flex-1 py-3 rounded-xl bg-white/10 text-white text-sm font-medium">
+                    Bekor
+                </button>
+                <button @click="confirm" :disabled="busy"
+                    class="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium disabled:opacity-50">
+                    <span x-show="!busy">✅ Tasdiqlash</span>
+                    <span x-show="busy">⏳ Yuklanmoqda...</span>
+                </button>
             </div>
         </div>
     </div>
@@ -148,11 +155,9 @@
         @else
             <p class="text-xs text-slate-500">Hali kiritilmagan</p>
         @endif
-
         <input wire:model="rate" type="text" inputmode="decimal" placeholder="2150"
             class="w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
         @error('rate') <div class="text-rose-600 text-xs">{{ $message }}</div> @enderror
-
         <button wire:click="saveRate" wire:loading.attr="disabled"
             class="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium">
             <span wire:loading.remove wire:target="saveRate">Kursni saqlash</span>

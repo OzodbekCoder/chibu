@@ -8,11 +8,13 @@
     <title>@yield('title', 'CHIBU')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    @stack('styles')
     <style>
         :root { --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-top: env(safe-area-inset-top, 0px); }
         body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .pb-nav { padding-bottom: calc(72px + var(--safe-bottom)); }
         .pt-safe { padding-top: var(--safe-top); }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased">
@@ -40,6 +42,7 @@
     </div>
 
     @livewireScripts
+    @stack('scripts')
     <script>
         (function () {
             const overlay = document.getElementById('offline-overlay');
