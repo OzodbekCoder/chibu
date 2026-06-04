@@ -75,6 +75,7 @@ class ShipmentList extends Component
             $term = trim($this->search);
             $query->where(function ($q) use ($term) {
                 $q->where('track_code', 'like', "%{$term}%")
+                  ->orWhere('note', 'like', "%{$term}%")
                   ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%{$term}%"));
             });
         }

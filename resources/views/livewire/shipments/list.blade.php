@@ -82,10 +82,6 @@
                 @endphp
                 <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <a href="{{ route('app.shipments.show', $s->id) }}" wire:navigate class="block">
-                    @if ($iImg)
-                        <img src="{{ $iImg }}" alt="rasm" class="w-full h-40 object-cover">
-                    @endif
-
                     <div class="p-3 space-y-2">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
@@ -134,12 +130,27 @@
                                     <div class="font-medium text-indigo-900 dark:text-indigo-300">🌐 {{ $iStatus }}</div>
                                     <div class="text-indigo-700 dark:text-indigo-400">{{ $iPayLbl }}</div>
                                 </div>
-                                @if ($iPaySom > 0)
-                                    <div class="text-indigo-700 dark:text-indigo-400 mt-0.5">🚚 {{ number_format($iPaySom) }} so'm</div>
-                                @endif
                                 @if ($iWeight)
-                                    <div class="text-indigo-600 dark:text-indigo-400 mt-0.5">⚖️ IPOST vazni: {{ $iWeight }} kg</div>
+                                    <div class="text-indigo-600 dark:text-indigo-400 mt-0.5">⚖️ Vazn: {{ $iWeight }} kg</div>
                                 @endif
+                            </div>
+
+                            {{-- Summa breakdown --}}
+                            <div class="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 text-xs">
+                                <div class="flex justify-between px-2 py-1.5">
+                                    <span class="text-slate-500 dark:text-slate-400">Tovar tannarxi</span>
+                                    <span class="font-medium dark:text-white">{{ $goodsUzs > 0 ? number_format((int) $goodsUzs) . " so'm" : '—' }}</span>
+                                </div>
+                                <div class="flex justify-between px-2 py-1.5">
+                                    <span class="text-slate-500 dark:text-slate-400">Yo'l kira</span>
+                                    <span class="font-medium {{ $iPaySom > 0 ? 'dark:text-white' : 'text-amber-600 dark:text-amber-400' }}">
+                                        {{ $iPaySom > 0 ? number_format($iPaySom) . " so'm" : 'hisoblanmagan' }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between px-2 py-1.5 bg-slate-50 dark:bg-slate-700/40">
+                                    <span class="font-semibold text-slate-700 dark:text-slate-200">Umumiy</span>
+                                    <span class="font-bold text-indigo-700 dark:text-indigo-300">{{ $totalUzs > 0 ? number_format((int) $totalUzs) . " so'm" : '—' }}</span>
+                                </div>
                             </div>
                         @endif
 

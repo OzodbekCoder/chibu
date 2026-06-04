@@ -36,12 +36,19 @@
         <div class="bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-sm p-3 rounded-xl border border-emerald-200 dark:border-emerald-700">{{ session('ok') }}</div>
     @endif
 
-    <a href="{{ route('app.shipments.index') }}" wire:navigate
-       class="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">← Ortga</a>
+    <button type="button" onclick="history.back()"
+       class="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">← Ortga</button>
 
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+         x-data="{ showImg: false }">
         @if ($iImg)
-            <img src="{{ $iImg }}" alt="rasm" class="w-full h-56 object-cover">
+            <div x-show="showImg" x-cloak>
+                <img src="{{ $iImg }}" alt="rasm" class="w-full h-64 object-cover" loading="lazy">
+            </div>
+            <button x-show="!showImg" @click="showImg = true" type="button"
+                class="w-full flex items-center justify-center gap-2 py-6 bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-300 text-sm">
+                🖼 Rasmni ko'rish
+            </button>
         @endif
 
         <div class="p-4 space-y-4">
