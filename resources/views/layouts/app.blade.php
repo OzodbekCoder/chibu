@@ -51,39 +51,6 @@
 
     @livewireScripts
     @stack('scripts')
-    @auth
-    <script>
-        // Capacitor push notification registration (only in native app)
-        (function() {
-            if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
-            import('https://cdn.jsdelivr.net/npm/@capacitor/push-notifications@6/dist/esm/index.js')
-                .then(({ PushNotifications }) => {
-                    PushNotifications.requestPermissions().then(result => {
-                        if (result.receive !== 'granted') return;
-                        PushNotifications.register();
-                    });
-                    PushNotifications.addListener('registration', token => {
-                        fetch('/api/device-token', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            },
-                            body: JSON.stringify({ token: token.value }),
-                        });
-                    });
-                    PushNotifications.addListener('pushNotificationReceived', notification => {
-                        // Refresh notification badge when push arrives in foreground
-                        window.dispatchEvent(new Event('livewire:navigate'));
-                    });
-                    PushNotifications.addListener('pushNotificationActionPerformed', () => {
-                        window.location.href = '/app/notifications';
-                    });
-                })
-                .catch(() => {});
-        })();
-    </script>
-    @endauth
     <script>
         (function () {
             const overlay = document.getElementById('offline-overlay');
