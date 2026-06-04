@@ -18,12 +18,14 @@
     </style>
 </head>
 <script>
-    (function(){
-        var t=localStorage.theme;
-        if(t==='dark'||(t===undefined&&window.matchMedia('(prefers-color-scheme:dark)').matches)){
-            document.documentElement.classList.add('dark');
-        }
-    })();
+    function applyTheme(){
+        var t = localStorage.theme;
+        var dark = t === 'dark' || (t === undefined && window.matchMedia('(prefers-color-scheme:dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+    }
+    applyTheme();
+    // Re-apply after Livewire SPA navigation (wire:navigate resets <html> class)
+    document.addEventListener('livewire:navigated', applyTheme);
 </script>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
     <!-- Offline overlay (hidden by default, shown on JS offline event for non-dashboard pages) -->
