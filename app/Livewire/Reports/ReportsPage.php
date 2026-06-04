@@ -24,7 +24,8 @@ class ReportsPage extends Component
     public function download(string $period, ReportService $service)
     {
         $userId = auth()->id();
-        $info   = $service->generate($userId, $period, (string) $userId);
+        $chatId = (string) (auth()->user()->chat_id ?? $userId);
+        $info   = $service->generate($userId, $period, $chatId);
         return response()->download($info['path'], $info['filename'])->deleteFileAfterSend(true);
     }
 
@@ -36,11 +37,12 @@ class ReportsPage extends Component
         ], ['to.after_or_equal' => 'Tugash sanasi boshlanishdan keyin bo\'lishi kerak']);
 
         $userId = auth()->id();
+        $chatId = (string) (auth()->user()->chat_id ?? $userId);
         $info   = $service->generateRange(
             $userId,
             Carbon::parse($this->from),
             Carbon::parse($this->to),
-            (string) $userId
+            $chatId
         );
         return response()->download($info['path'], $info['filename'])->deleteFileAfterSend(true);
     }
@@ -53,11 +55,12 @@ class ReportsPage extends Component
         ], ['to.after_or_equal' => 'Tugash sanasi boshlanishdan keyin bo\'lishi kerak']);
 
         $userId = auth()->id();
+        $chatId = (string) (auth()->user()->chat_id ?? $userId);
         $info   = $service->generateArchive(
             $userId,
             Carbon::parse($this->from),
             Carbon::parse($this->to),
-            (string) $userId
+            $chatId
         );
         return response()->download($info['path'], $info['filename'])->deleteFileAfterSend(true);
     }

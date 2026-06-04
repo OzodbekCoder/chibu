@@ -57,7 +57,7 @@ class ShipmentList extends Component
     public function render(IpostService $ipost)
     {
         $userId = auth()->id();
-        $chatId = (string) $userId;
+        $chatId = (string) (auth()->user()->chat_id ?? $userId);
 
         $query = Shipment::with('client')
             ->where('created_by_id', $userId);

@@ -35,7 +35,8 @@ class CheckIpostStatuses extends Command
             ->pluck('created_by_id');
 
         foreach ($userIds as $userId) {
-            $ipostMap = $ipost->fetchAllByTrack((string) $userId);
+            $chatId   = (string) (User::find($userId)?->chat_id ?? $userId);
+            $ipostMap = $ipost->fetchAllByTrack($chatId);
             if (empty($ipostMap)) continue;
 
             $shipments = Shipment::where('created_by_id', $userId)

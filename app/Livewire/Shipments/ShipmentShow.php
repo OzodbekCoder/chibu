@@ -39,8 +39,9 @@ class ShipmentShow extends Component
     public function render(IpostService $ipost)
     {
         $userId   = auth()->id();
+        $chatId   = (string) (auth()->user()->chat_id ?? $userId);
         $ipostMap = \Illuminate\Support\Facades\Cache::remember(
-            "ipost_map_{$userId}", 300, fn () => $ipost->fetchAllByTrack((string) $userId)
+            "ipost_map_{$userId}", 300, fn () => $ipost->fetchAllByTrack($chatId)
         );
         $yuanRate = (float) (CurrencyRate::latestYuan($userId)?->rate ?? 0);
 

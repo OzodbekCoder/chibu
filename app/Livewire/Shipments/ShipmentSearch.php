@@ -40,7 +40,8 @@ class ShipmentSearch extends Component
                 ->get();
         }
 
-        $ipostMap = $results->isNotEmpty() ? $ipost->fetchAllByTrack((string) $userId) : [];
+        $chatId   = (string) (auth()->user()->chat_id ?? $userId);
+        $ipostMap = $results->isNotEmpty() ? $ipost->fetchAllByTrack($chatId) : [];
         $yuanRate = (float) (CurrencyRate::latestYuan($userId)?->rate ?? 0);
 
         return view('livewire.shipments.search', [
