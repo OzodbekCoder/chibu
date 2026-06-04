@@ -9,4 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Check IPOST statuses every 7 minutes and notify on change
-Schedule::command('ipost:check-statuses')->everySevenMinutes();
+Schedule::command('ipost:check-statuses')->cron('*/7 * * * *');

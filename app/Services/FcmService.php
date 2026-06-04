@@ -2,39 +2,28 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Kreait\Firebase\Contract\Messaging;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
 
 class FcmService
 {
+    public function __construct(private Messaging $messaging) {}
+
     public function send(string $deviceToken, string $title, string $body, array $data = []): bool
     {
-        $serverKey = env('FCM_SERVER_KEY', '');
-        if (!$serverKey || !$deviceToken) return false;
+        if (!$deviceToken) return false;
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'key=' . $serverKey,
-                'Content-Type'  => 'application/json',
-            ])->post('https://fcm.googleapis.com/fcm/send', [
-                'to' => $deviceToken,
-                'notification' => [
-                    'title' => $title,
-                    'body'  => $body,
-                    'sound' => 'default',
-                ],
-                'data'    => $data,
-                'priority' => 'high',
-            ]);
+            $message = CloudMessage::withTarget('token', $deviceToken)
+                ->withNotification(Notification::create($title, $body))
+                ->withData(array_map('strval', $data));
 
-            if (!$response->successful()) {
-                Log::warning('FCM send failed', ['status' => $response->status(), 'body' => $response->body()]);
-                return false;
-            }
-
+            $this->messaging->send($message);
             return true;
         } catch (\Throwable $e) {
-            Log::error('FCM exception', ['error' => $e->getMessage()]);
+            Log::error('FCM send failed', ['error' => $e->getMessage()]);
             return false;
         }
     }
