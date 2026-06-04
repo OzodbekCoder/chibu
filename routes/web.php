@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Livewire\Clients\ClientList;
 use App\Livewire\Dashboard;
+use App\Livewire\Notifications\NotificationList;
 use App\Livewire\Reports\ReportsPage;
 use App\Livewire\Settings\SettingsPage;
 use App\Livewire\Shipments\ShipmentCreate;
@@ -29,6 +30,7 @@ Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
     Route::get('/shipments/search', ShipmentSearch::class)->name('shipments.search');
     Route::get('/clients',   ClientList::class)->name('clients.index');
     // (also linked from Settings page)
-    Route::get('/reports',   ReportsPage::class)->name('reports.index');
-    Route::get('/settings',  SettingsPage::class)->name('settings.index');
+    Route::get('/reports',       ReportsPage::class)->name('reports.index');
+    Route::get('/settings',      SettingsPage::class)->name('settings.index');
+    Route::get('/notifications', NotificationList::class)->name('notifications.index');
 });
