@@ -101,12 +101,19 @@
                     @if ($iWeight)
                         <div class="text-indigo-700 dark:text-indigo-400">⚖️ Vazn: {{ $iWeight }} kg</div>
                     @endif
-                    @if ($iPaySom > 0)
+                    @if ($hasDelivery)
                         <div class="text-indigo-700 dark:text-indigo-400">🚚 Yo'l haqqi: {{ number_format($iPaySom) }} so'm</div>
+                    @else
+                        <div class="text-amber-600 dark:text-amber-400">🚚 Yo'l haqqi: hali hisoblanmagan</div>
                     @endif
                     @if ($perPiece)
-                        <div class="font-semibold text-indigo-900 dark:text-indigo-200 pt-1 border-t border-indigo-200/50 dark:border-indigo-700/50">
-                            💰 1 dona tannarx: {{ number_format($perPiece) }} so'm
+                        <div class="font-semibold pt-1 border-t border-indigo-200/50 dark:border-indigo-700/50
+                            {{ $hasDelivery ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300' }}">
+                            @if ($hasDelivery)
+                                ✅ 1 dona tannarx (yo'l kira bilan): {{ number_format($perPiece) }} so'm
+                            @else
+                                ⚠️ 1 dona tannarx (yo'l kirasiz): {{ number_format($perPiece) }} so'm
+                            @endif
                         </div>
                     @endif
                 </div>

@@ -115,9 +115,11 @@
                                 <div class="font-medium dark:text-white">{{ $s->created_at->format('d.m.Y') }}</div>
                             </div>
                             @if ($perPiece)
-                            <div class="bg-emerald-50 dark:bg-emerald-900/40 rounded-lg px-2 py-1.5">
-                                <div class="text-emerald-600 dark:text-emerald-400 text-[10px]">1 dona tannarx</div>
-                                <div class="font-semibold text-emerald-700 dark:text-emerald-300">{{ number_format($perPiece) }} so'm</div>
+                            <div class="rounded-lg px-2 py-1.5 {{ $iPaySom > 0 ? 'bg-emerald-50 dark:bg-emerald-900/40' : 'bg-amber-50 dark:bg-amber-900/40' }}">
+                                <div class="text-[10px] {{ $iPaySom > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                    {{ $iPaySom > 0 ? '✅ 1 dona (yo\'l kira bilan)' : '⚠️ 1 dona (yo\'l kirasiz)' }}
+                                </div>
+                                <div class="font-semibold {{ $iPaySom > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300' }}">{{ number_format($perPiece) }} so'm</div>
                             </div>
                             @endif
                         </div>
