@@ -39,7 +39,12 @@ class IpostService
         $headers = $this->headers($chatIdHeader);
 
         try {
-            $res = Http::withHeaders($headers)->timeout(15)->get($endpoint);
+            $res = Http::withHeaders($headers)
+                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                ->connectTimeout(10)
+                ->timeout(20)
+                ->retry(2, 500)
+                ->get($endpoint);
             if (!$res->successful()) {
                 Log::warning('IPOST fetch failed', [
                     'status'   => $res->status(),
@@ -72,7 +77,9 @@ class IpostService
 
         try {
             $response = Http::withHeaders($this->headers($chatIdHeader))
-                ->timeout(15)
+                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                ->connectTimeout(10)
+                ->timeout(20)
                 ->post($endpoint, ['trackingNumber' => $shipment->track_code]);
 
             if (!$response->successful()) {
