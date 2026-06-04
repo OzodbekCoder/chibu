@@ -77,10 +77,11 @@
                     $totalUzs  = $goodsUzs + $iPaySom;
                     $perPiece  = ($s->pieces && $totalUzs > 0) ? (int) ($totalUzs / $s->pieces) : null;
                     $iImg      = $ii['images'][1] ?? ($ii['images'][0] ?? null);
-                    $isActive  = !in_array($s->status, ['DELIVERED','CANCELLED']);
-                    $canAccept = $isActive && $ii && in_array($ii['status'] ?? '', \App\Services\IpostService::ACCEPT_STATUSES);
+                    $canAccept = $s->status === 'CREATED'
+                        && $ii && in_array($ii['status'] ?? '', ['DropZone', 'DistributionCenter', 'Delivered']);
                 @endphp
                 <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <a href="{{ route('app.shipments.show', $s->id) }}" wire:navigate class="block">
                     @if ($iImg)
                         <img src="{{ $iImg }}" alt="rasm" class="w-full h-40 object-cover">
                     @endif
@@ -143,8 +144,11 @@
                         @if ($s->note)
                             <div class="text-xs text-slate-600 dark:text-slate-400 italic">📝 {{ $s->note }}</div>
                         @endif
+                    </div>
+                    </a>
 
-                        @if ($canAccept)
+                    @if ($canAccept)
+                        <div class="px-3 pb-3">
                             <button wire:click="accept({{ $s->id }})"
                                 wire:confirm="Bu yukni qabul qildingizmi?"
                                 wire:loading.attr="disabled"
@@ -153,8 +157,8 @@
                                 <span wire:loading.remove wire:target="accept({{ $s->id }})">✅ Qabul qilish</span>
                                 <span wire:loading wire:target="accept({{ $s->id }})">⏳...</span>
                             </button>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
             @endforeach
         </div>

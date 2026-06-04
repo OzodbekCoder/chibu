@@ -9,6 +9,7 @@ use App\Livewire\Settings\SettingsPage;
 use App\Livewire\Shipments\ShipmentCreate;
 use App\Livewire\Shipments\ShipmentList;
 use App\Livewire\Shipments\ShipmentSearch;
+use App\Livewire\Shipments\ShipmentShow;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,7 @@ Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
     Route::get('/shipments', ShipmentList::class)->name('shipments.index');
     Route::get('/shipments/new', ShipmentCreate::class)->name('shipments.create');
     Route::get('/shipments/search', ShipmentSearch::class)->name('shipments.search');
+    Route::get('/shipments/{shipment}', ShipmentShow::class)->name('shipments.show');
     Route::get('/clients',   ClientList::class)->name('clients.index');
     // (also linked from Settings page)
     Route::get('/reports',       ReportsPage::class)->name('reports.index');

@@ -158,14 +158,14 @@
 
     {{-- Yuan kursi --}}
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-        <h2 class="font-semibold">💴 Yuan kursi</h2>
+        <h2 class="font-semibold dark:text-white">💴 Yuan kursi</h2>
         @if ($latest)
-            <p class="text-xs text-slate-500">Hozir: <b>1 ¥ = {{ number_format((float) $latest->rate, 2) }} so'm</b> · {{ $latest->rate_date }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Hozir: <b class="dark:text-white">1 ¥ = {{ number_format((float) $latest->rate, 2) }} so'm</b> · {{ $latest->rate_date }}</p>
         @else
-            <p class="text-xs text-slate-500">Hali kiritilmagan</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Hali kiritilmagan</p>
         @endif
         <input wire:model="rate" type="text" inputmode="decimal" placeholder="2150"
-            class="w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
+            class="w-full rounded-xl border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white px-3 py-2.5 border focus:border-indigo-500 text-sm">
         @error('rate') <div class="text-rose-600 text-xs">{{ $message }}</div> @enderror
         <button wire:click="saveRate" wire:loading.attr="disabled"
             class="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium">
@@ -176,13 +176,13 @@
 
     {{-- Kurs tarixi --}}
     @if ($history->isNotEmpty())
-    <div class="bg-white rounded-2xl border border-slate-200">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
         <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 font-semibold text-sm dark:text-white">📈 Kurs tarixi</div>
-        <div class="divide-y divide-slate-100">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700">
             @foreach ($history as $h)
                 <div class="px-4 py-2 flex justify-between text-sm">
-                    <span class="text-slate-500">{{ $h->rate_date }}</span>
-                    <span class="font-medium">{{ number_format((float) $h->rate, 2) }} so'm</span>
+                    <span class="text-slate-500 dark:text-slate-400">{{ $h->rate_date }}</span>
+                    <span class="font-medium dark:text-white">{{ number_format((float) $h->rate, 2) }} so'm</span>
                 </div>
             @endforeach
         </div>

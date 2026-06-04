@@ -155,7 +155,7 @@
                     'DELIVERED'       => 'Yetkazildi',
                 ];
             @endphp
-            <div class="px-4 py-3">
+            <a href="{{ route('app.shipments.show', $s->id) }}" wire:navigate class="block px-4 py-3 active:bg-slate-50 dark:active:bg-slate-700/50">
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
                         <div class="font-mono text-xs text-slate-400 truncate">{{ $s->track_code }}</div>
@@ -166,7 +166,7 @@
                     </span>
                 </div>
                 <div class="text-xs text-slate-400 mt-1">{{ $s->created_at->format('d.m.Y') }}</div>
-            </div>
+            </a>
             @endforeach
         </div>
     </div>
