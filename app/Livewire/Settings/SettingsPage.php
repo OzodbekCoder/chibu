@@ -44,6 +44,17 @@ class SettingsPage extends Component
         $this->rate = $latest ? (string) (float) $latest->rate : '';
     }
 
+    public function deleteAvatar(): void
+    {
+        $user = auth()->user();
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+            $user->avatar = null;
+            $user->save();
+        }
+        session()->flash('ok', '✅ Rasm o\'chirildi');
+    }
+
     public function saveProfile(): void
     {
         $this->validateOnly('avatar');

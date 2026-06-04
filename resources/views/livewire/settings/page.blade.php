@@ -12,7 +12,7 @@
     @endif
 
     {{-- Profil --}}
-    <div class="bg-white rounded-2xl border border-slate-200 p-4"
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4"
          x-data="{
              showModal: false,
              cropper:   null,
@@ -60,7 +60,7 @@
              }
          }">
 
-        <h2 class="font-semibold mb-4">👤 Profil</h2>
+        <h2 class="font-semibold dark:text-white mb-4">👤 Profil</h2>
 
         {{-- Avatar: centered circle, click to change --}}
         <div class="flex flex-col items-center gap-3 mb-4">
@@ -78,7 +78,16 @@
                     <span class="text-white text-xs font-medium">✏️</span>
                 </div>
             </button>
-            <p class="text-xs text-slate-400">Rasmga bosib o'zgartiring</p>
+            <div class="flex items-center gap-2">
+                <p class="text-xs text-slate-400">Rasmga bosib o'zgartiring</p>
+                @if ($avatarUrl)
+                    <button wire:click="deleteAvatar"
+                        wire:confirm="Rasmni o'chirasizmi?"
+                        class="text-xs text-rose-500 dark:text-rose-400 hover:underline">
+                        🗑 O'chirish
+                    </button>
+                @endif
+            </div>
         </div>
 
         <input type="file" x-ref="fileInput" @change="onFile" accept="image/*" class="sr-only">
@@ -86,7 +95,7 @@
         <label class="block mb-3">
             <span class="text-sm text-slate-600">Ismi</span>
             <input wire:model="profileName" type="text"
-                class="mt-1 w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
+                class="mt-1 w-full rounded-xl border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white px-3 py-2.5 border focus:border-indigo-500 text-sm">
         </label>
 
         <button wire:click="saveProfile" wire:loading.attr="disabled"
@@ -123,21 +132,21 @@
     </div>
 
     {{-- O'z ma'lumotlari --}}
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
         <h2 class="font-semibold">📦 Mening ma'lumotlarim</h2>
         <p class="text-xs text-slate-500">Yuklarda ko'rsatiladigan ism va telefon</p>
 
         <label class="block">
             <span class="text-sm text-slate-600">To'liq ism</span>
             <input wire:model="clientName" type="text"
-                class="mt-1 w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
+                class="mt-1 w-full rounded-xl border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white px-3 py-2.5 border focus:border-indigo-500 text-sm">
         </label>
         @error('clientName') <div class="text-rose-600 text-xs">{{ $message }}</div> @enderror
 
         <label class="block">
             <span class="text-sm text-slate-600">Telefon (ixtiyoriy)</span>
             <input wire:model="clientPhone" type="tel" inputmode="tel" placeholder="+998..."
-                class="mt-1 w-full rounded-xl border-slate-300 px-3 py-2.5 border focus:border-indigo-500 text-sm">
+                class="mt-1 w-full rounded-xl border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white px-3 py-2.5 border focus:border-indigo-500 text-sm">
         </label>
 
         <button wire:click="saveClient" wire:loading.attr="disabled"
@@ -148,7 +157,7 @@
     </div>
 
     {{-- Yuan kursi --}}
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
         <h2 class="font-semibold">💴 Yuan kursi</h2>
         @if ($latest)
             <p class="text-xs text-slate-500">Hozir: <b>1 ¥ = {{ number_format((float) $latest->rate, 2) }} so'm</b> · {{ $latest->rate_date }}</p>
@@ -168,7 +177,7 @@
     {{-- Kurs tarixi --}}
     @if ($history->isNotEmpty())
     <div class="bg-white rounded-2xl border border-slate-200">
-        <div class="px-4 py-3 border-b border-slate-100 font-semibold text-sm">📈 Kurs tarixi</div>
+        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 font-semibold text-sm dark:text-white">📈 Kurs tarixi</div>
         <div class="divide-y divide-slate-100">
             @foreach ($history as $h)
                 <div class="px-4 py-2 flex justify-between text-sm">
@@ -179,6 +188,26 @@
         </div>
     </div>
     @endif
+
+    {{-- Dark / Light rejim --}}
+    <div x-data="{ dark: document.documentElement.classList.contains('dark') }"
+         class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+        <div>
+            <div class="text-sm font-medium dark:text-white" x-text="dark ? '🌙 Qorong\'i rejim' : '☀️ Yorug\' rejim'"></div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Ekran ko'rinishi</div>
+        </div>
+        <button type="button" @click="
+                dark = !dark;
+                document.documentElement.classList.toggle('dark', dark);
+                localStorage.theme = dark ? 'dark' : 'light';
+            "
+            :class="dark ? 'bg-indigo-600' : 'bg-slate-200'"
+            class="relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none">
+            <span :class="dark ? 'translate-x-6' : 'translate-x-1'"
+                  class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 flex items-center justify-center text-[10px]"
+                  x-text="dark ? '🌙' : '☀️'"></span>
+        </button>
+    </div>
 
     {{-- Chiqish --}}
     <form method="POST" action="{{ route('logout') }}">

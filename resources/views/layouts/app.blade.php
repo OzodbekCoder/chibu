@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" class="">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -17,7 +17,15 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 antialiased">
+<script>
+    (function(){
+        var t=localStorage.theme;
+        if(t==='dark'||(t===undefined&&window.matchMedia('(prefers-color-scheme:dark)').matches)){
+            document.documentElement.classList.add('dark');
+        }
+    })();
+</script>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
     <!-- Offline overlay (hidden by default, shown on JS offline event for non-dashboard pages) -->
     <div id="offline-overlay" style="display:none"
          class="fixed inset-0 bg-slate-900/90 z-[999] flex-col items-center justify-center gap-4 text-center px-8">
