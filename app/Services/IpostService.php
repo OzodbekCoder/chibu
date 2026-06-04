@@ -41,7 +41,12 @@ class IpostService
         try {
             $res = Http::withHeaders($headers)->timeout(15)->get($endpoint);
             if (!$res->successful()) {
-                Log::warning('IPOST fetch failed', ['status' => $res->status()]);
+                Log::warning('IPOST fetch failed', [
+                    'status'   => $res->status(),
+                    'body'     => mb_substr($res->body(), 0, 500),
+                    'endpoint' => $endpoint,
+                    'chat_id'  => $headers['x-chat-id'] ?? null,
+                ]);
                 return [];
             }
             $data  = $res->json();
