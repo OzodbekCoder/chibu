@@ -33,7 +33,8 @@ class NotificationList extends Component
         $userId = auth()->id();
 
         return view('livewire.notifications.list', [
-            'notifications' => ShipmentNotification::where('user_id', $userId)
+            'notifications' => ShipmentNotification::with('shipment:id,note')
+                ->where('user_id', $userId)
                 ->latest()
                 ->paginate(20),
             'unreadCount' => ShipmentNotification::where('user_id', $userId)

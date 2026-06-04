@@ -28,7 +28,9 @@
                              : 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700' }}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex-1 min-w-0">
-                            <div class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $n->track_code }}</div>
+                            <div class="font-mono text-xs text-slate-500 dark:text-slate-400">
+                                {{ $n->track_code }}@if ($n->shipment?->note)<span class="text-slate-400">({{ $n->shipment->note }})</span>@endif
+                            </div>
                             <div class="text-sm font-medium mt-0.5 dark:text-white">
                                 @if ($n->old_status)
                                     <span class="text-slate-500 dark:text-slate-400">{{ \App\Services\IpostService::STATUS_LABELS[$n->old_status] ?? $n->old_status }}</span>

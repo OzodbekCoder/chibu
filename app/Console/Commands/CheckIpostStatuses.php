@@ -58,7 +58,9 @@ class CheckIpostStatuses extends Command
                 $oldLabel = $statusLabels[$shipment->ipost_status] ?? ($shipment->ipost_status ?? 'Noma\'lum');
                 $newLabel = $statusLabels[$newStatus] ?? $newStatus;
 
-                $message = "📦 {$shipment->track_code}\n{$oldLabel} → {$newLabel}";
+                // TRACK_RAQAM(IZOH) format
+                $title   = $shipment->track_code . ($shipment->note ? "({$shipment->note})" : '');
+                $message = "📦 {$title}\n{$oldLabel} → {$newLabel}";
 
                 ShipmentNotification::create([
                     'user_id'     => $userId,
@@ -75,7 +77,7 @@ class CheckIpostStatuses extends Command
                     $fcm->send(
                         $deviceToken,
                         'CHIBU: Yuk holati o\'zgardi',
-                        "{$shipment->track_code}: {$newLabel}",
+                        "{$title}: {$newLabel}",
                         ['shipment_id' => (string) $shipment->id]
                     );
                 }
