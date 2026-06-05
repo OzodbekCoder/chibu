@@ -6,7 +6,6 @@ use App\Models\CurrencyRate;
 use App\Models\Shipment;
 use App\Services\IpostService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -52,6 +51,8 @@ class ShipmentList extends Component
                 'arrived_at' => Carbon::now(),
                 'status_at'  => Carbon::now(),
             ]);
+
+        (new IpostService())->forget(auth()->id());
     }
 
     public function render(IpostService $ipost)
@@ -81,7 +82,7 @@ class ShipmentList extends Component
         }
 
         $shipments = $query->latest()->paginate(10);
-        $ipostMap  = Cache::remember("ipost_map_{$userId}", 300, fn () => $ipost->fetchAllByTrack($chatId));
+        $ipostMap  = $ipost->cached($userId, $chatId);
         $yuanRate  = (float) (CurrencyRate::latestYuan($userId)?->rate ?? 0);
 
         return view('livewire.shipments.list', [

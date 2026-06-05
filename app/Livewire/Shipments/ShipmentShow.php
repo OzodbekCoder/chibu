@@ -33,6 +33,7 @@ class ShipmentShow extends Component
         ]);
         $this->shipment->refresh();
 
+        (new IpostService())->forget(auth()->id());
         session()->flash('ok', '✅ Yuk qabul qilindi');
     }
 
@@ -40,9 +41,7 @@ class ShipmentShow extends Component
     {
         $userId   = auth()->id();
         $chatId   = (string) (auth()->user()->chat_id ?? $userId);
-        $ipostMap = \Illuminate\Support\Facades\Cache::remember(
-            "ipost_map_{$userId}", 300, fn () => $ipost->fetchAllByTrack($chatId)
-        );
+        $ipostMap = $ipost->cached($userId, $chatId);
         $yuanRate = (float) (CurrencyRate::latestYuan($userId)?->rate ?? 0);
 
         return view('livewire.shipments.show', [

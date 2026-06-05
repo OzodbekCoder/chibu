@@ -3,11 +3,44 @@
 namespace App\Services;
 
 use App\Models\Shipment;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class IpostService
 {
+    public const CACHE_TTL = 600; // 10 daqiqa
+
+    public static function cacheKey(int $userId): string
+    {
+        return "ipost_map_{$userId}";
+    }
+
+    /**
+     * Cached IPOST map. Reads from cache; fetches live only on miss.
+     */
+    public function cached(int $userId, string $chatIdHeader = ''): array
+    {
+        return Cache::remember(
+            self::cacheKey($userId),
+            self::CACHE_TTL,
+            fn () => $this->fetchAllByTrack($chatIdHeader)
+        );
+    }
+
+    /**
+     * Store a freshly fetched map into cache (used by scheduler).
+     */
+    public function putCache(int $userId, array $map): void
+    {
+        Cache::put(self::cacheKey($userId), $map, self::CACHE_TTL);
+    }
+
+    public function forget(int $userId): void
+    {
+        Cache::forget(self::cacheKey($userId));
+    }
+
     public const STATUS_LABELS = [
         'Warehouse'          => '🏭 Xitoy ombori',
         'Ulugchat'           => '🛂 Xitoy chegara punkti',

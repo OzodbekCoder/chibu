@@ -102,6 +102,7 @@ class ShipmentCreate extends Component
 
         $shipment = Shipment::create($data);
 
+        $ipost->forget($userId);
         session()->flash('ok', "✅ #{$shipment->id} · {$shipment->track_code} saqlandi");
         return redirect()->route('app.shipments.index');
     }

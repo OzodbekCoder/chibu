@@ -39,6 +39,9 @@ class CheckIpostStatuses extends Command
             $ipostMap = $ipost->fetchAllByTrack($chatId);
             if (empty($ipostMap)) continue;
 
+            // Refresh UI cache with the freshly fetched data
+            $ipost->putCache($userId, $ipostMap);
+
             $shipments = Shipment::where('created_by_id', $userId)
                 ->whereNotIn('status', ['DELIVERED', 'CANCELLED'])
                 ->whereNotNull('ipost_id')
