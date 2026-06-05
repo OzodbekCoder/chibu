@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DeviceTokenController;
 use App\Livewire\Clients\ClientList;
 use App\Livewire\Dashboard;
 use App\Livewire\Notifications\NotificationList;
@@ -35,4 +36,7 @@ Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
     Route::get('/reports',       ReportsPage::class)->name('reports.index');
     Route::get('/settings',      SettingsPage::class)->name('settings.index');
     Route::get('/notifications', NotificationList::class)->name('notifications.index');
+
+    // Device token registration (web session auth, called from native webview)
+    Route::post('/device-token', [DeviceTokenController::class, 'store'])->name('device-token');
 });

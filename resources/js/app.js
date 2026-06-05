@@ -17,7 +17,7 @@ function registerPush() {
     });
 
     PushNotifications.addListener('registration', (token) => {
-        fetch('/api/device-token', {
+        fetch('/app/device-token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
