@@ -65,8 +65,8 @@ class IpostService
      */
     public function fetchAllByTrack(string $chatIdHeader = ''): array
     {
-        $endpoint = rtrim(env('IPOST_ADD_ENDPOINT', ''), '/');
-        $apiKey   = env('IPOST_API_KEY', '');
+        $endpoint = rtrim(config('ipost.endpoint', ''), '/');
+        $apiKey   = config('ipost.api_key', '');
         if (!$endpoint || !$apiKey) return [];
 
         $headers = $this->headers($chatIdHeader);
@@ -104,8 +104,8 @@ class IpostService
 
     public function register(Shipment $shipment, string $chatIdHeader = ''): ?string
     {
-        $endpoint = rtrim(env('IPOST_ADD_ENDPOINT', ''), '/');
-        $apiKey   = env('IPOST_API_KEY', '');
+        $endpoint = rtrim(config('ipost.endpoint', ''), '/');
+        $apiKey   = config('ipost.api_key', '');
         if (!$endpoint || !$apiKey) return null;
 
         try {
@@ -151,7 +151,7 @@ class IpostService
      */
     public function setRemark(int $ipostId, string $remark, string $chatIdHeader = ''): bool
     {
-        $endpoint = rtrim(env('IPOST_ADD_ENDPOINT', ''), '/');
+        $endpoint = rtrim(config('ipost.endpoint', ''), '/');
         if (!$endpoint) return false;
 
         try {
@@ -179,12 +179,12 @@ class IpostService
 
     private function headers(string $chatIdHeader): array
     {
-        // Single IPOST account: prefer fixed IPOST_CHAT_ID from env.
+        // Single IPOST account: prefer fixed IPOST_CHAT_ID from config.
         // Web users have synthetic chat_id (web-xxxx) that IPOST rejects with 401.
-        $chatId = env('IPOST_CHAT_ID') ?: $chatIdHeader;
+        $chatId = config('ipost.chat_id') ?: $chatIdHeader;
 
         return [
-            'x-apikey'    => env('IPOST_API_KEY', ''),
+            'x-apikey'    => config('ipost.api_key', ''),
             'x-timestamp' => 1777288697,
             'x-chat-id'   => (string) $chatId,
             'source'      => 'TELEGRAM',
