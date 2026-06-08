@@ -21,7 +21,7 @@ class ShipmentCreate extends Component
     public string $track_code = '';
 
     // Step 2
-    public string $tariff_type = 'kg';
+    public string $tariff_type = 'piece';
     public string $amount      = '';
 
     // Step 3
@@ -102,8 +102,16 @@ class ShipmentCreate extends Component
 
         $shipment = Shipment::create($data);
 
+        // Register to IPOST + set remark (note)
+        $chatId  = (string) (auth()->user()->chat_id ?? $userId);
+        $ipostId = $ipost->register($shipment, $chatId);
+
         $ipost->forget($userId);
-        session()->flash('ok', "✅ #{$shipment->id} · {$shipment->track_code} saqlandi");
+
+        $msg = $ipostId
+            ? "✅ #{$shipment->id} · {$shipment->track_code} saqlandi va IPOST'ga qo'shildi"
+            : "✅ #{$shipment->id} · {$shipment->track_code} saqlandi (IPOST keyinroq biriktiriladi)";
+        session()->flash('ok', $msg);
         return redirect()->route('app.shipments.index');
     }
 

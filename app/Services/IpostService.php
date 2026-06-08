@@ -113,29 +113,67 @@ class IpostService
                 ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
                 ->connectTimeout(10)
                 ->timeout(20)
+                ->retry(2, 1000)
                 ->post($endpoint, ['trackingNumber' => $shipment->track_code]);
 
             if (!$response->successful()) {
-                Log::warning('IPOST add failed', ['status' => $response->status()]);
+                Log::warning('IPOST add failed', [
+                    'status' => $response->status(),
+                    'body'   => mb_substr($response->body(), 0, 300),
+                    'track'  => $shipment->track_code,
+                ]);
                 return null;
             }
 
             $data    = $response->json();
             $ipostId = is_array($data) ? ($data[0]['id'] ?? null) : ($data['id'] ?? null);
-            if (!$ipostId) return null;
+            if (!$ipostId) {
+                Log::warning('IPOST add: no id in response', ['body' => mb_substr($response->body(), 0, 300)]);
+                return null;
+            }
 
             $shipment->update(['ipost_id' => (string) $ipostId]);
 
+            // Set remark (note) — separate call, must succeed for note to appear in IPOST
             if ($shipment->note) {
-                Http::withHeaders($this->headers($chatIdHeader))
-                    ->timeout(15)
-                    ->post("{$endpoint}/{$ipostId}/remark", ['remark' => $shipment->note]);
+                $this->setRemark((int) $ipostId, $shipment->note, $chatIdHeader);
             }
 
             return (string) $ipostId;
         } catch (\Throwable $e) {
-            Log::error('IPOST register exception', ['error' => $e->getMessage()]);
+            Log::error('IPOST register exception', ['error' => $e->getMessage(), 'track' => $shipment->track_code]);
             return null;
+        }
+    }
+
+    /**
+     * Set/update remark (note) on an IPOST parcel.
+     */
+    public function setRemark(int $ipostId, string $remark, string $chatIdHeader = ''): bool
+    {
+        $endpoint = rtrim(env('IPOST_ADD_ENDPOINT', ''), '/');
+        if (!$endpoint) return false;
+
+        try {
+            $res = Http::withHeaders($this->headers($chatIdHeader))
+                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                ->connectTimeout(10)
+                ->timeout(20)
+                ->retry(2, 1000)
+                ->post("{$endpoint}/{$ipostId}/remark", ['remark' => $remark]);
+
+            if (!$res->successful()) {
+                Log::warning('IPOST remark failed', [
+                    'status'   => $res->status(),
+                    'body'     => mb_substr($res->body(), 0, 300),
+                    'ipost_id' => $ipostId,
+                ]);
+                return false;
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('IPOST remark exception', ['error' => $e->getMessage(), 'ipost_id' => $ipostId]);
+            return false;
         }
     }
 
