@@ -52,9 +52,18 @@ class TestPush extends Command
             return self::FAILURE;
         }
 
-        $this->info("=== Sending test push to user {$userId} ===");
-        $ok = $fcm->send($token, 'CHIBU test', 'Bu sinov bildirishnomasi ✅', ['type' => 'test']);
-        $this->line($ok ? '✅ FCM send returned TRUE' : '❌ FCM send returned FALSE (check logs)');
+        $this->info("=== Sending test push to user {$userId} (raw, shows real error) ===");
+        try {
+            $messaging = app(\Kreait\Firebase\Contract\Messaging::class);
+            $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
+                ->withNotification(\Kreait\Firebase\Messaging\Notification::create('CHIBU test', 'Sinov ✅'))
+                ->withData(['type' => 'test']);
+            $messaging->send($message);
+            $this->info('✅ Push yuborildi');
+        } catch (\Throwable $e) {
+            $this->error('❌ ' . get_class($e));
+            $this->line($e->getMessage());
+        }
 
         return self::SUCCESS;
     }
