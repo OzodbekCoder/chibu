@@ -17,6 +17,8 @@ class CheckIpostStatuses extends Command
 
     public function handle(IpostService $ipost, FcmService $fcm): int
     {
+        \Illuminate\Support\Facades\Log::info('ipost:check-statuses started at ' . now()->toDateTimeString());
+
         $statusLabels = [
             'Warehouse'          => 'Xitoy ombori',
             'Ulugchat'           => 'Xitoy chegara punkti',
