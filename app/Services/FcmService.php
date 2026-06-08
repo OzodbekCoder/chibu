@@ -16,7 +16,8 @@ class FcmService
             // Lazily resolve messaging so missing credentials don't crash callers
             $messaging = app(\Kreait\Firebase\Contract\Messaging::class);
 
-            $message = CloudMessage::withTarget('token', $deviceToken)
+            $message = CloudMessage::new()
+                ->withToken($deviceToken)
                 ->withNotification(Notification::create($title, $body))
                 ->withData(array_map('strval', $data));
 

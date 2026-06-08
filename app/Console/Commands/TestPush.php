@@ -55,7 +55,8 @@ class TestPush extends Command
         $this->info("=== Sending test push to user {$userId} (raw, shows real error) ===");
         try {
             $messaging = app(\Kreait\Firebase\Contract\Messaging::class);
-            $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
+            $message = \Kreait\Firebase\Messaging\CloudMessage::new()
+                ->withToken($token)
                 ->withNotification(\Kreait\Firebase\Messaging\Notification::create('CHIBU test', 'Sinov ✅'))
                 ->withData(['type' => 'test']);
             $messaging->send($message);
