@@ -60,7 +60,7 @@ class ShipmentList extends Component
         $userId = auth()->id();
         $chatId = (string) (auth()->user()->chat_id ?? $userId);
 
-        $query = Shipment::with('client')
+        $query = Shipment::with('client:id,name')
             ->where('created_by_id', $userId);
 
         if ($this->showArchive) {

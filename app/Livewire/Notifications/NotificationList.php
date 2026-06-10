@@ -19,6 +19,8 @@ class NotificationList extends Component
         ShipmentNotification::where('user_id', auth()->id())
             ->where('is_read', false)
             ->update(['is_read' => true]);
+
+        \Illuminate\Support\Facades\Cache::forget('unread_badge_' . auth()->id());
     }
 
     public function markRead(int $id): void
@@ -26,6 +28,8 @@ class NotificationList extends Component
         ShipmentNotification::where('id', $id)
             ->where('user_id', auth()->id())
             ->update(['is_read' => true]);
+
+        \Illuminate\Support\Facades\Cache::forget('unread_badge_' . auth()->id());
     }
 
     public function render()

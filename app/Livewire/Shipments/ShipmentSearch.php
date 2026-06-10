@@ -29,7 +29,7 @@ class ShipmentSearch extends Component
         $results = collect();
         if (mb_strlen(trim($this->query)) >= 2) {
             $term = trim($this->query);
-            $results = Shipment::with('client')
+            $results = Shipment::with('client:id,name')
                 ->where('created_by_id', $userId)
                 ->where(function ($q) use ($term) {
                     $q->where('track_code', 'like', "%{$term}%")

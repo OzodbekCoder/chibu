@@ -1,10 +1,13 @@
 @php
-    $avatar  = auth()->user()->avatar
-        ? \Illuminate\Support\Facades\Storage::url(auth()->user()->avatar)
-        : null;
-    $initial  = mb_strtoupper(mb_substr(auth()->user()->name ?? 'U', 0, 1));
-    $unreadCount = \App\Models\ShipmentNotification::where('user_id', auth()->id())
-        ->where('is_read', false)->count();
+    $user    = auth()->user();
+    $avatar  = $user->avatar ? \Illuminate\Support\Facades\Storage::url($user->avatar) : null;
+    $initial = mb_strtoupper(mb_substr($user->name ?? 'U', 0, 1));
+    // 60s cache: skip a COUNT query on every page render
+    $unreadCount = \Illuminate\Support\Facades\Cache::remember(
+        "unread_badge_{$user->id}",
+        60,
+        fn () => \App\Models\ShipmentNotification::where('user_id', $user->id)->where('is_read', false)->count()
+    );
 @endphp
 <header class="pt-safe bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 transition-colors">
     <div class="px-4 py-2.5 flex items-center justify-between">
@@ -19,7 +22,7 @@
                 </div>
             @endif
             <div>
-                <div class="text-sm font-semibold leading-tight dark:text-white">{{ auth()->user()->name }}</div>
+                <div class="text-sm font-semibold leading-tight dark:text-white">{{ $user->name }}</div>
                 <div class="text-[10px] text-slate-400 leading-tight">CHIBU</div>
             </div>
         </a>

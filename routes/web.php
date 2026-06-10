@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DeviceTokenController;
-use App\Livewire\Clients\ClientList;
 use App\Livewire\Dashboard;
 use App\Livewire\Notifications\NotificationList;
 use App\Livewire\Reports\ReportsPage;
@@ -31,8 +30,6 @@ Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
     Route::get('/shipments/new', ShipmentCreate::class)->name('shipments.create');
     Route::get('/shipments/search', ShipmentSearch::class)->name('shipments.search');
     Route::get('/shipments/{shipment}', ShipmentShow::class)->name('shipments.show');
-    Route::get('/clients',   ClientList::class)->name('clients.index');
-    // (also linked from Settings page)
     Route::get('/reports',       ReportsPage::class)->name('reports.index');
     Route::get('/settings',      SettingsPage::class)->name('settings.index');
     Route::get('/notifications', NotificationList::class)->name('notifications.index');

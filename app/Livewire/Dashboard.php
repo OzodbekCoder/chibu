@@ -64,23 +64,28 @@ class Dashboard extends Component
 
         $activeStatuses = ['CREATED', 'CHINA_WAREHOUSE', 'ON_THE_WAY', 'CUSTOMS'];
 
-        $activeCount    = Shipment::where('created_by_id', $userId)->whereIn('status', $activeStatuses)->count();
-        $deliveredToday = Shipment::where('created_by_id', $userId)
-            ->where('status', 'DELIVERED')
-            ->whereDate('arrived_at', Carbon::today())
-            ->count();
-
-        $inRange   = Shipment::where('created_by_id', $userId)->whereBetween('created_at', [$from, $to]);
-        $rangeCount = (clone $inRange)->count();
-        $rangeYuan  = (clone $inRange)->sum('price_yuan') ?? 0;
-
+        // One grouped query covers breakdown + activeCount + deliveredToday
         $statusBreakdown = Shipment::where('created_by_id', $userId)
             ->whereIn('status', $activeStatuses)
             ->selectRaw('status, COUNT(*) as cnt')
             ->groupBy('status')
             ->pluck('cnt', 'status');
+        $activeCount = (int) $statusBreakdown->sum();
 
-        $latest = Shipment::with('client')
+        $deliveredToday = Shipment::where('created_by_id', $userId)
+            ->where('status', 'DELIVERED')
+            ->whereBetween('arrived_at', [Carbon::today(), Carbon::today()->endOfDay()])
+            ->count();
+
+        // count + sum in a single aggregate query
+        $range = Shipment::where('created_by_id', $userId)
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(price_yuan), 0) as yuan')
+            ->first();
+        $rangeCount = (int) $range->cnt;
+        $rangeYuan  = (float) $range->yuan;
+
+        $latest = Shipment::with('client:id,name')
             ->where('created_by_id', $userId)
             ->whereIn('status', $activeStatuses)
             ->latest()

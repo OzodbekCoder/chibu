@@ -79,12 +79,7 @@ class IpostService
                 ->retry(2, 500)
                 ->get($endpoint);
             if (!$res->successful()) {
-                Log::warning('IPOST fetch failed', [
-                    'status'   => $res->status(),
-                    'body'     => mb_substr($res->body(), 0, 500),
-                    'endpoint' => $endpoint,
-                    'chat_id'  => $headers['x-chat-id'] ?? null,
-                ]);
+                Log::warning('IPOST fetch failed', ['status' => $res->status()]);
                 return [];
             }
             $data  = $res->json();
@@ -117,20 +112,13 @@ class IpostService
                 ->post($endpoint, ['trackingNumber' => $shipment->track_code]);
 
             if (!$response->successful()) {
-                Log::warning('IPOST add failed', [
-                    'status' => $response->status(),
-                    'body'   => mb_substr($response->body(), 0, 300),
-                    'track'  => $shipment->track_code,
-                ]);
+                Log::warning('IPOST add failed', ['status' => $response->status(), 'track' => $shipment->track_code]);
                 return null;
             }
 
             $data    = $response->json();
             $ipostId = is_array($data) ? ($data[0]['id'] ?? null) : ($data['id'] ?? null);
-            if (!$ipostId) {
-                Log::warning('IPOST add: no id in response', ['body' => mb_substr($response->body(), 0, 300)]);
-                return null;
-            }
+            if (!$ipostId) return null;
 
             $shipment->update(['ipost_id' => (string) $ipostId]);
 
@@ -163,11 +151,7 @@ class IpostService
                 ->post("{$endpoint}/{$ipostId}/remark", ['remark' => $remark]);
 
             if (!$res->successful()) {
-                Log::warning('IPOST remark failed', [
-                    'status'   => $res->status(),
-                    'body'     => mb_substr($res->body(), 0, 300),
-                    'ipost_id' => $ipostId,
-                ]);
+                Log::warning('IPOST remark failed', ['status' => $res->status(), 'ipost_id' => $ipostId]);
                 return false;
             }
             return true;
