@@ -46,6 +46,7 @@ class IpostService
         'Ulugchat'           => '🛂 Xitoy chegara punkti',
         'Osh'                => "🏔 O'zbekiston chegara punkti",
         'DistributionCenter' => '🏢 Hududiy omborda',
+        'Approaching'        => '🚐 Yetkizib berish manziliga yuborildi',
         'DropZone'           => '📍 Qabul qilish punkti',
         'Delivered'          => '✅ Qabul qilindi',
         'CREATED'            => '🆕 Yangi yaratildi',

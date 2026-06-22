@@ -19,7 +19,9 @@
     };
     $iPaySom    = (int) ($ii['payAmountSom'] ?? 0);
     $iWeight    = $ii['weight'] ?? null;
-    $iImg       = $ii['images'][1] ?? ($ii['images'][0] ?? null);
+    $iImgPrimary  = $ii['images'][1] ?? null;          // afzal: ishchi rasmi
+    $iImgFallback = $ii['images'][0] ?? null;          // zaxira: agar primary invalid bo'lsa
+    $iImg         = $iImgPrimary ?: $iImgFallback;
     $goodsUzs   = ($yuanRate > 0 && $s->price_yuan) ? (float) $s->price_yuan * $yuanRate : 0;
     $hasDelivery = $iPaySom > 0;               // payAmountSom=0 => yo'l kira hali hisoblanmagan
     $totalUzs   = $goodsUzs + $iPaySom;
@@ -43,7 +45,11 @@
          x-data="{ showImg: false }">
         @if ($iImg)
             <div x-show="showImg" x-cloak>
-                <img src="{{ $iImg }}" alt="rasm" class="w-full h-64 object-cover" loading="lazy">
+                <img src="{{ $iImg }}" alt="rasm" class="w-full h-64 object-cover" loading="lazy"
+                     @if ($iImgFallback && $iImgPrimary && $iImgFallback !== $iImgPrimary)
+                         data-fallback="{{ $iImgFallback }}"
+                         onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.removeAttribute('data-fallback');}"
+                     @endif>
             </div>
             <button x-show="!showImg" @click="showImg = true" type="button"
                 class="w-full flex items-center justify-center gap-2 py-6 bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-300 text-sm">
