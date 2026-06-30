@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class ChannelBotService
 {
@@ -38,7 +37,7 @@ class ChannelBotService
             'jahon futboli — yangiliklar, rekordlar, afsonaviy o\'yinchilar',
             'o\'zbek futboli va milliy terma jamoa',
             'jahon badiiy adabiyoti — yozuvchilar va asarlar',
-            'o\'zbek badiiy adabiyoti — Cho\'lpon, Qodiriy, Oybek va boshqalar',
+            'o\'zbek badiiy adabiyoti — Qodiriy, Oybek va boshqalar',
             'mashhur kitoblardan iqtiboslar va g\'oyalar',
         ],
     ];
@@ -168,9 +167,13 @@ TXT;
         $dir = storage_path('app/' . self::MEDIA_DIR);
         if (!is_dir($dir)) return null;
 
+        $maxBytes = 5 * 1024 * 1024; // 5 MB
         $files = array_values(array_filter(
             glob($dir . '/*') ?: [],
-            fn ($f) => is_file($f) && !str_starts_with(basename($f), '.')
+            fn($f) => is_file($f)
+                && !str_starts_with(basename($f), '.')
+                && filesize($f) > 0
+                && filesize($f) <= $maxBytes
         ));
         if (empty($files)) return null;
 
@@ -181,12 +184,10 @@ TXT;
         return ['path' => $path, 'hint' => $hint];
     }
 
-    /** Yuborilgan media faylni "used" papkaga ko'chiradi (qayta ishlatilmasin). */
+    /** Yuborilgan media faylni o'chiradi (server joyini band qilmasin). */
     private function consumeMedia(string $path): void
     {
-        $usedDir = storage_path('app/' . self::MEDIA_DIR . '/used');
-        if (!is_dir($usedDir)) @mkdir($usedDir, 0775, true);
-        @rename($path, $usedDir . '/' . basename($path));
+        @unlink($path);
     }
 
     /** Fayl uchun qisqa caption yozadi (fayl nomi — mavzu maslahati). */
