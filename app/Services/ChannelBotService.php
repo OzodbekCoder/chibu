@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ChannelBotService
 {
@@ -34,8 +35,16 @@ class ChannelBotService
             'kosmos va astronomiya',
             'tabiat va hayvonot olami',
             'mashhur ixtirochilar va kashfiyotlar',
+            'jahon futboli — yangiliklar, rekordlar, afsonaviy o\'yinchilar',
+            'o\'zbek futboli va milliy terma jamoa',
+            'jahon badiiy adabiyoti — yozuvchilar va asarlar',
+            'o\'zbek badiiy adabiyoti — Cho\'lpon, Qodiriy, Oybek va boshqalar',
+            'mashhur kitoblardan iqtiboslar va g\'oyalar',
         ],
     ];
+
+    /** Foydalanuvchi joylaydigan media papka */
+    private const MEDIA_DIR = 'channel-media';
 
     /**
      * AI bilan post matni yaratadi.
@@ -135,8 +144,121 @@ TXT;
 
     public function generateAndSend(string $type): bool
     {
+        // ~40% ehtimol bilan media papkadagi fayldan post (agar fayl bo'lsa)
+        $media = $this->pickMedia();
+        if ($media && random_int(1, 100) <= 40) {
+            $caption = $this->generateCaption($type, $media['hint']);
+            if ($caption && $this->sendMedia($media['path'], $caption)) {
+                $this->consumeMedia($media['path']);
+                return true;
+            }
+        }
+
         $text = $this->generate($type);
         if (!$text) return false;
         return $this->send($text);
+    }
+
+    /**
+     * Media papkadan tasodifiy fayl tanlaydi (yo'l + fayl nomidan mavzu maslahati).
+     * @return array{path:string,hint:string}|null
+     */
+    private function pickMedia(): ?array
+    {
+        $dir = storage_path('app/' . self::MEDIA_DIR);
+        if (!is_dir($dir)) return null;
+
+        $files = array_values(array_filter(
+            glob($dir . '/*') ?: [],
+            fn ($f) => is_file($f) && !str_starts_with(basename($f), '.')
+        ));
+        if (empty($files)) return null;
+
+        $path = $files[array_rand($files)];
+        $hint = pathinfo($path, PATHINFO_FILENAME);
+        $hint = trim(preg_replace('/[_\-]+/', ' ', $hint));
+
+        return ['path' => $path, 'hint' => $hint];
+    }
+
+    /** Yuborilgan media faylni "used" papkaga ko'chiradi (qayta ishlatilmasin). */
+    private function consumeMedia(string $path): void
+    {
+        $usedDir = storage_path('app/' . self::MEDIA_DIR . '/used');
+        if (!is_dir($usedDir)) @mkdir($usedDir, 0775, true);
+        @rename($path, $usedDir . '/' . basename($path));
+    }
+
+    /** Fayl uchun qisqa caption yozadi (fayl nomi — mavzu maslahati). */
+    private function generateCaption(string $type, string $hint): ?string
+    {
+        $key   = config('channelbot.anthropic_key');
+        $model = config('channelbot.anthropic_model');
+        if (!$key) return null;
+
+        $prompt = <<<TXT
+Telegram kanal uchun rasm/fayl ostiga qisqa, jonli izoh (caption) yoz.
+Post turi: {$type}. Fayl mavzusi (nomidan): "{$hint}".
+
+Talablar:
+- 1-3 jumla, O'zbek tilida (lotin).
+- Boshida mos emoji bilan qisqa qalin sarlavha (<b>...</b>).
+- Telegram HTML: <b>, <i> mumkin. Markdown EMAS. Hashtag YO'Q.
+- Faqat caption matnini qaytar.
+TXT;
+
+        try {
+            $res = Http::withHeaders([
+                'x-api-key'         => $key,
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+            ])
+                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                ->connectTimeout(10)->timeout(60)->retry(2, 2000)
+                ->post('https://api.anthropic.com/v1/messages', [
+                    'model'      => $model,
+                    'max_tokens' => 512,
+                    'messages'   => [['role' => 'user', 'content' => $prompt]],
+                ]);
+
+            $text = $res->successful() ? $res->json('content.0.text') : null;
+            return $text ? trim($text) : null;
+        } catch (\Throwable $e) {
+            Log::error('ChannelBot caption exception', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /** Rasm yoki fayl + caption yuboradi (kengaytmaga qarab photo/document). */
+    private function sendMedia(string $path, string $caption): bool
+    {
+        $token   = config('channelbot.token');
+        $channel = config('channelbot.channel');
+        if (!$token || !$channel || !is_file($path)) return false;
+
+        $ext      = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $isPhoto  = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
+        $method   = $isPhoto ? 'sendPhoto' : 'sendDocument';
+        $field    = $isPhoto ? 'photo' : 'document';
+
+        try {
+            $res = Http::withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                ->connectTimeout(10)->timeout(60)->retry(2, 2000)
+                ->attach($field, file_get_contents($path), basename($path))
+                ->post("https://api.telegram.org/bot{$token}/{$method}", [
+                    'chat_id'    => $channel,
+                    'caption'    => mb_substr($caption, 0, 1024),
+                    'parse_mode' => 'HTML',
+                ]);
+
+            if (!$res->successful()) {
+                Log::warning('ChannelBot media send failed', ['status' => $res->status(), 'body' => mb_substr($res->body(), 0, 200)]);
+                return false;
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('ChannelBot media exception', ['error' => $e->getMessage()]);
+            return false;
+        }
     }
 }
