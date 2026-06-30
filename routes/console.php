@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Check IPOST statuses every 7 minutes and notify on change
 Schedule::command('ipost:check-statuses')->cron('*/7 * * * *');
+
+// Channel bot: every 15 min checks the daily random-time plan and posts when due
+Schedule::command('channel:tick')->cron('*/15 * * * *');
