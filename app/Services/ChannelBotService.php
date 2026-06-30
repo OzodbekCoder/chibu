@@ -66,19 +66,23 @@ class ChannelBotService
             ? "Texno post: 2-3 abzas, mavzuni tushuntir, qiziqarli detal yoki misol qo'sh. Batafsil lekin og'ir emas."
             : "Qiziqarli post: 2-4 jumla, yengil va jonli. Ajablanarli fakt yoki foydali maslahat.";
 
+        $author = config('channelbot.author', 'kanal egasi');
+
         $prompt = <<<TXT
-Sen O'zbek tilidagi Telegram kanal uchun post yozasan. Kanal mavzusi: texnologiya va qiziqarli narsalar.
+Sen "{$author}" nomidan O'zbek tilidagi shaxsiy Telegram kanal uchun post yozasan.
+Kanal mavzusi: texnologiya va qiziqarli narsalar.
 
 Bugungi post turi: {$type}
 Tanlangan mavzu yo'nalishi: {$topic}
 
 Talablar:
 - {$style}
-- Toza, tabiiy o'zbek tilida yoz (lotin alifbosi).
+- MUHIM: Birinchi shaxsda, men ohangida yoz — go'yo kanal egasi o'z fikrini, qiziqishini, kuzatuvini bo'lishyapti. Masalan: "Bugun bir narsani o'qib qoldim...", "Menimcha...", "O'zim sinab ko'rdim...", "Buni bilarmidingiz".
+- Tabiiy, samimiy, do'stona ohang. Quruq ensiklopediya emas — jonli odam gapirayotgandek.
+- Toza o'zbek tilida (lotin alifbosi).
 - Boshida mos emoji bilan qisqa sarlavha (qalin <b>...</b>).
-- Telegram HTML formatdan foydalan: <b>, <i>, <code> mumkin. Markdown EMAS.
+- Telegram HTML: <b>, <i>, <code> mumkin. Markdown EMAS.
 - Hashtag QO'SHMA. Reklama yoki "obuna bo'ling" YOZMA.
-- Aniq, yangi, takrorlanmaydigan mavzuni o'zing tanlab chuqurroq yoz.
 - Faqat post matnini qaytar, boshqa hech narsa yozma.
 TXT;
 
@@ -201,12 +205,15 @@ TXT;
         $model = config('channelbot.anthropic_model');
         if (!$key) return null;
 
+        $author = config('channelbot.author', 'kanal egasi');
+
         $prompt = <<<TXT
-Telegram kanal uchun rasm/fayl ostiga qisqa, jonli izoh (caption) yoz.
+"{$author}" nomidan Telegram kanal uchun rasm/fayl ostiga qisqa izoh (caption) yoz.
 Post turi: {$type}. Fayl mavzusi (nomidan): "{$hint}".
 
 Talablar:
 - 1-3 jumla, O'zbek tilida (lotin).
+- Birinchi shaxsda, men ohangida — kanal egasi o'z fikrini bo'lishyapti (masalan: "Mana buni ko'ring...", "Menga juda yoqdi...").
 - Boshida mos emoji bilan qisqa qalin sarlavha (<b>...</b>).
 - Telegram HTML: <b>, <i> mumkin. Markdown EMAS. Hashtag YO'Q.
 - Faqat caption matnini qaytar.

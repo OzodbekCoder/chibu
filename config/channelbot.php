@@ -16,4 +16,7 @@ return [
 
     // Har kuni postlar turlari (random vaqtda tashlanadi)
     'daily_posts' => ['texno', 'hobby'],
+
+    // Postlar shu shaxs nomidan, birinchi shaxsda yoziladi
+    'author' => env('CHANNEL_AUTHOR', 'kanal egasi'),
 ];
