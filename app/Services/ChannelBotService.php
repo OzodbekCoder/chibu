@@ -39,6 +39,10 @@ class ChannelBotService
             'jahon badiiy adabiyoti — yozuvchilar va asarlar',
             'o\'zbek badiiy adabiyoti — Qodiriy, Oybek va boshqalar',
             'mashhur kitoblardan iqtiboslar va g\'oyalar',
+            'ilmiy-fantastik kinolar — tavsiya va qiziqarli faktlar',
+            'detektiv kinolar va seriallar — eng zo\'rlari',
+            'komediya kinolar — kulgili va mashhur asarlar',
+            'kino olami — rejissyorlar, syujet sirlari, Oskar',
         ],
     ];
 
