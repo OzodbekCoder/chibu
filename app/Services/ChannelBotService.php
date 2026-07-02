@@ -10,18 +10,18 @@ class ChannelBotService
     /** Mavzu uchun keng yo'nalishlar — har safar tasodifiy tanlanadi */
     private const TOPICS = [
         'texno' => [
+            'Laravel — yangi imkoniyatlar, maslahatlar, best practices',
+            'PHP tili — yangiliklar va foydali xususiyatlar',
+            'backend arxitektura — API, queue, cache, microservices',
+            'ma\'lumotlar bazasi — SQL, indekslar, optimizatsiya (PostgreSQL/MySQL)',
             'sun\'iy intellekt va mashina o\'rganish',
             'dasturlash tillari va frameworklar',
             'kiberxavfsizlik va maxfiylik',
             'yangi gadjetlar va qurilmalar',
-            'kosmik texnologiyalar',
             'web va mobil ishlab chiqish',
-            'open source loyihalar',
-            'kvant kompyuterlar',
-            'blockchain va kripto texnologiya',
-            'robototexnika va avtomatlashtirish',
-            'ma\'lumotlar bazasi va backend',
-            'DevOps va bulutli texnologiyalar',
+            'open source loyihalar (GitHub)',
+            'DevOps, Docker va bulutli texnologiyalar',
+            'kvant kompyuterlar va kosmik texnologiyalar',
         ],
         'hobby' => [
             'qiziqarli ilmiy faktlar',
@@ -83,6 +83,7 @@ Talablar:
 - Boshida mos emoji bilan qisqa sarlavha (qalin <b>...</b>).
 - Telegram HTML: <b>, <i>, <code> mumkin. Markdown EMAS.
 - Hashtag QO'SHMA. Reklama yoki "obuna bo'ling" YOZMA.
+- Oxirida MUMKIN bo'lsa bitta ishonchli manba havolasi qo'sh: <a href="URL">Manba</a> (rasmiy sayt, hujjat, Wikipedia yoki GitHub). Havola HAQIQIY va mashhur bo'lsin — o'ylab TOPMA. Ishonching komil bo'lmasa havola qo'shma.
 - Faqat post matnini qaytar, boshqa hech narsa yozma.
 TXT;
 
